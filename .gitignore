@@ -1,0 +1,49 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.DS_Store
+
+# 环境变量
+.env
+.env.local
+
+# 机密文档目录（默认不提交）
+docs/
+埋点/
+机密文件/
+*.private.*
+*机密*
+
+# 文档文件（可能包含机密内容）
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# 截图和图片（可能包含敏感信息）
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+# 例外：assets/ 和 public/ 目录下的图片需要提交（用于网站）
+!assets/**/*.png
+!assets/**/*.jpg
+!assets/**/*.svg
+!public/**/*.png
+!public/**/*.jpg
+!public/**/*.svg
+
+# 工作流状态
+.pm-workflow/
+checkpoint.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
