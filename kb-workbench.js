@@ -1928,7 +1928,7 @@
     // 根据场景设置左栏空/满 + 中栏状态
     const setEmpty = ()=>{
       sbL.classList.add('empty');
-      if(recentChatCountEl) recentChatCountEl.textContent = '0';
+      if(recentChatCountEl) recentChatCountEl.textContent = '';
     };
     const setFilled = ()=>{
       sbL.classList.remove('empty');

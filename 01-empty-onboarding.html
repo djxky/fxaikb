@@ -121,7 +121,7 @@
         <div class="asset-sub-label clickable file-view-label active" onclick="navToKnowledgeBase()" title="按文件夹浏览所有资料">
           <i data-lucide="folder" class="asset-type-icon"></i>
           <span>文件</span>
-          <button class="label-action" type="button" title="上传资料" onclick="event.stopPropagation();openUploadWindow()"><i data-lucide="upload"></i></button>
+          <button class="label-action text-action" type="button" onclick="event.stopPropagation();openUploadWindow()">上传</button>
         </div>
         <div class="asset-file-tree">
 
@@ -264,11 +264,9 @@
       <div class="nav-label recent-chat-label" onclick="showToast('还没有最近对话')">
         <i data-lucide="messages-square" class="nav-label-icon"></i>
         <span>最近对话</span>
-        <button class="label-action" type="button" title="新建对话" onclick="event.stopPropagation();startNewChatFromTopbar()"><i data-lucide="message-circle-plus"></i></button>
-        <span class="recent-chat-count" id="nav-recent-chat-count">0</span>
+        <button class="label-action text-action" type="button" onclick="event.stopPropagation();startNewChatFromTopbar()">新对话</button>
       </div>
       <div class="recent-chat-list" id="recent-chat-list">
-        <div class="recent-chat-empty-note">上传或提问后，对话会出现在这里</div>
         <div class="tree-row file leaf recent-chat ai-source welcome" data-chat-id="chat-welcome" onclick="openRecentChat('chat-welcome')">
           <span class="tree-arrow"></span>
           <span class="tree-label">你好 · 介绍下你自己</span>

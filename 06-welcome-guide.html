@@ -121,7 +121,7 @@
         <div class="asset-sub-label clickable file-view-label active" onclick="navToKnowledgeBase()" title="按文件夹浏览所有资料">
           <i data-lucide="folder" class="asset-type-icon"></i>
           <span>文件</span>
-          <button class="label-action" type="button" title="上传资料" onclick="event.stopPropagation();openUploadWindow()"><i data-lucide="upload"></i></button>
+          <button class="label-action text-action" type="button" onclick="event.stopPropagation();openUploadWindow()">上传</button>
         </div>
         <div class="asset-file-tree">
 
@@ -272,8 +272,7 @@
       <div class="nav-label recent-chat-label" onclick="toggleRecentChatSection()">
         <i data-lucide="messages-square" class="nav-label-icon"></i>
         <span>最近对话</span>
-        <button class="label-action" type="button" title="新建对话" onclick="event.stopPropagation();startNewChatFromTopbar()"><i data-lucide="message-circle-plus"></i></button>
-        <span class="recent-chat-count" id="nav-recent-chat-count">12</span>
+        <button class="label-action text-action" type="button" onclick="event.stopPropagation();startNewChatFromTopbar()">新对话</button>
       </div>
       <div class="recent-chat-list" id="recent-chat-list">
         <!-- 入门指南（产品预置的第 1 条对话，v3.4 改为统一走 openRecentChat）
@@ -285,45 +284,6 @@
             <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
             今天
           </span>
-        </div>
-        <!-- 老用户：3 条最近对话 + 查看全部
-             单条前置 ✦ 标识"跟 AI 聊过的"
-             右侧 .rc-art-badge 显示该对话产出的 AI 文件数 — 让"AI 写的东西在哪"可见 -->
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-fnxxk" onclick="openRecentChat('chat-fnxxk')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">设计一节函数复习课</span>
-          <span class="recent-chat-time">
-            <span class="rc-art-badge" title="该对话产出 2 份 AI 文件"><i data-lucide="file-text"></i>2</span>
-            10:08
-          </span>
-        </div>
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-bsst" onclick="openRecentChat('chat-bsst')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">出 10 道二次函数变式题</span>
-          <span class="recent-chat-time">
-            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
-            昨天
-          </span>
-        </div>
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-qdsjx" onclick="openRecentChat('chat-qdsjx')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">全等三角形错题讲评思路</span>
-          <span class="recent-chat-time">
-            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
-            04-22
-          </span>
-        </div>
-        <!-- v3.4 新增：演示一条无产物对话（focus-chat 模式） -->
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-noartifact" onclick="openRecentChat('chat-noartifact')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">问 a/b/c 系数原理</span>
-          <span class="recent-chat-time">
-            04-20
-          </span>
-        </div>
-        <div class="tree-row tree-more-link" onclick="showToast('对话历史完整视图开发中')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">查看全部 12 条…</span>
         </div>
       </div>
 
