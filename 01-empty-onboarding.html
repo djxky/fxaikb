@@ -277,70 +277,6 @@
       </div>
       </div>
 
-      <!-- ===== 最近对话（一级实体，跟上方「我的知识库」资产组并列）=====
-           设计哲学（v2 范式切换：从"草稿"→"对话"为中心）：
-           - 对话 = 老师跟 AI 的每一次互动（产物在对话上下文里）
-           - AI 写的内容直接通过「保存到我的知识库」一步入库（无中间"草稿"态）
-           - 没保存的对话产物也能从这里找回（按对话主题/时间检索）
-           - 入门指南作为预置的第 1 条对话（视觉一致，无特殊化）
-           - 心智借鉴：ChatGPT / Claude 的 Conversations -->
-      <div class="nav-label recent-chat-label" onclick="toggleRecentChatSection()">
-        <i data-lucide="messages-square" class="nav-label-icon"></i>
-        <span>最近对话</span>
-        <span class="recent-chat-count" id="nav-recent-chat-count">12</span>
-      </div>
-      <div class="recent-chat-list" id="recent-chat-list">
-        <!-- 入门指南（产品预置的第 1 条对话，v3.4 改为统一走 openRecentChat）
-             - 有产物（入门指南.html）→ 中栏自动打开 + 右栏对话历史 -->
-        <div class="tree-row file leaf recent-chat ai-source welcome" data-chat-id="chat-welcome" onclick="openRecentChat('chat-welcome')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">你好 · 介绍下你自己</span>
-          <span class="recent-chat-time">
-            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
-            今天
-          </span>
-        </div>
-        <!-- 老用户：3 条最近对话 + 查看全部
-             单条前置 ✦ 标识"跟 AI 聊过的"
-             右侧 .rc-art-badge 显示该对话产出的 AI 文件数 — 让"AI 写的东西在哪"可见 -->
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-fnxxk" onclick="openRecentChat('chat-fnxxk')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">设计一节函数复习课</span>
-          <span class="recent-chat-time">
-            <span class="rc-art-badge" title="该对话产出 2 份 AI 文件"><i data-lucide="file-text"></i>2</span>
-            10:08
-          </span>
-        </div>
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-bsst" onclick="openRecentChat('chat-bsst')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">出 10 道二次函数变式题</span>
-          <span class="recent-chat-time">
-            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
-            昨天
-          </span>
-        </div>
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-qdsjx" onclick="openRecentChat('chat-qdsjx')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">全等三角形错题讲评思路</span>
-          <span class="recent-chat-time">
-            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
-            04-22
-          </span>
-        </div>
-        <!-- v3.4 新增：演示一条无产物对话（focus-chat 模式） -->
-        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-noartifact" onclick="openRecentChat('chat-noartifact')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">问 a/b/c 系数原理</span>
-          <span class="recent-chat-time">
-            04-20
-          </span>
-        </div>
-        <div class="tree-row tree-more-link" onclick="showToast('对话历史完整视图开发中')">
-          <span class="tree-arrow"></span>
-          <span class="tree-label">查看全部 12 条…</span>
-        </div>
-      </div>
-
       <div class="more-toggle" onclick="this.classList.toggle('open')">
         <span class="arr">▸</span>
         标签
@@ -695,44 +631,6 @@
 
         </div>
 
-        <!-- 最近对话区（v2：原"草稿专区"重新定位）
-             —— 列出最近几次 AI 互动产物，给老师快速访问入口
-             —— 跟左栏「最近对话」是同一个数据源 -->
-        <div class="section-head" style="margin-top:28px">
-          <span class="section-title">最近对话</span>
-          <span class="section-meta" style="color:#A87E2C;font-size:11.5px">AI 帮你写的，看完点「保存到我的知识库」入库</span>
-          <span class="section-meta"><span class="more" onclick="showToast('对话历史完整视图开发中')">查看全部 12 条 →</span></span>
-        </div>
-        <div class="draft-row-list">
-
-          <div class="draft-row-item" onclick="openDraftSource('对话 · 二次函数变式题')">
-            <span class="ai-mini-dot" style="flex-shrink:0"></span>
-            <div class="dri-body">
-              <div class="dri-title">二次函数图像导入 · 变式题集（5 道）</div>
-              <div class="dri-meta">基于昨天对话生成 · 难度梯度 A→C，含 2 道开放性题目</div>
-            </div>
-            <span class="dri-time">昨天 21:08</span>
-            <div class="dri-actions">
-              <button class="dri-btn" onclick="event.stopPropagation();showToast('（演示）重新生成')">改一版</button>
-              <button class="dri-btn primary" onclick="event.stopPropagation();saveToMyKnowledgeBase(null);showToast('✓ 已保存到「数学 › 八下·二次函数」')">保存到我的知识库</button>
-            </div>
-          </div>
-
-          <div class="draft-row-item" onclick="openDraftSource('对话 · 全等三角形错题讲评')">
-            <span class="ai-mini-dot" style="flex-shrink:0"></span>
-            <div class="dri-body">
-              <div class="dri-title">八(3)班勾股定理 · 错题薄弱点分析</div>
-              <div class="dri-meta">引用学情数据（飞象作业）· 列出 3 类典型错法 · 共 8 份扫描件</div>
-            </div>
-            <span class="dri-time">04-22</span>
-            <div class="dri-actions">
-              <button class="dri-btn" onclick="event.stopPropagation();showToast('（演示）重新生成')">改一版</button>
-              <button class="dri-btn primary" onclick="event.stopPropagation();showToast('✓ 已保存到「数学 › 临时·待整理」')">保存到我的知识库</button>
-            </div>
-          </div>
-
-        </div>
-
       </div><!-- /默认态 -->
 
     </div>
@@ -840,7 +738,7 @@
       <div class="chat-composer-foot">
         <button class="composer-pill" title="附件"><i data-lucide="paperclip"></i>附件</button>
         <!-- @引用：体现"知识库 vs 外部 sources" 的产品架构哲学
-             v1：仅「我的知识库」可用；学情/作文需买对应飞象产品（灰色置灰）
+             当前仅「我的知识库」可用；更多数据源后续开放
              这个 UI 在 v1 就传达"知识库可独立 + 多产品打通是加分"的概念 -->
         <div class="composer-cite-wrap">
           <button class="composer-pill" title="@引用 sources" onclick="toggleCiteMenu(event)">
@@ -856,13 +754,13 @@
               </div>
               <i data-lucide="check" class="cite-chk"></i>
             </div>
-            <div class="cite-item disabled" title="需购买飞象作业产品">
+            <div class="cite-item disabled" title="后续开放">
               <i data-lucide="bar-chart-3" class="cite-i"></i>
               <div class="cite-text">
-                <div class="cite-t">学情数据</div>
-                <div class="cite-s">需购买 飞象作业 · 学生作答数据</div>
+                <div class="cite-t">更多数据源</div>
+                <div class="cite-s">后续可引用作业、作文等外部资料</div>
               </div>
-              <span class="cite-lock">解锁</span>
+              <span class="cite-lock">即将开放</span>
             </div>
             <div class="cite-item disabled" title="需购买飞象作文产品">
               <i data-lucide="file-text" class="cite-i"></i>

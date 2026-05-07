@@ -418,9 +418,9 @@
               <span class="smh-time">今天 14:00</span>
             </div>
             <div class="stream-bubble">
-              你好张老师！我是<b>飞象 AI</b>——你的备课助手。跟通用 AI 不一样的是：
-              <b>我读过你的备课资料</b>，所以能基于你的课件、真题、错例帮你做事，不是凭空写。
-              <p class="wlc-p">我专门为你做了一份图文 + 视频版的使用指南：</p>
+              你好张老师！我是<b>飞象 AI</b>——先读你的资料，再帮你备课的 AI 助手。
+              你把课件、教案、试卷、错题放进来，我会把它们变成可引用的上下文；之后再写教案、出题、找资料，就不需要从零开始。
+              <p class="wlc-p">我先为你准备了一份入门指南：从搭建知识库到第一次让 AI 干活。</p>
 
               <!-- AI 生成的产物文件卡片 -->
               <div class="wlc-artifact" onclick="openWelcomeDoc()">
@@ -429,7 +429,7 @@
                 </div>
                 <div class="wlc-art-body">
                   <div class="wlc-art-name">飞象 AI · 入门指南<span class="wlc-art-ext">.html</span></div>
-                  <div class="wlc-art-desc">含 2 分钟视频 + 三步上手 + 4 个常用场景</div>
+                  <div class="wlc-art-desc">含 2 分钟视频 + 搭建方法 + 4 个常用场景</div>
                   <div class="wlc-art-meta">
                     <span class="wlc-art-tag"><i data-lucide="video"></i>视频 2:30</span>
                     <span class="wlc-art-tag"><i data-lucide="clock-3"></i>约 2 分钟阅读</span>
@@ -446,7 +446,7 @@
               </div>
 
               <p class="wlc-p" style="margin-top:14px">
-                看完后可以试试问我这些（点击直接发送）：
+                有资料后，可以先从这些问题开始（点击直接发送）：
               </p>
               <div class="wlc-examples">
                 <button class="wlc-ex" onclick="tryExampleQuestion('帮我把这份课件改成 8 年级难度，留 5 分钟做导入')">
@@ -457,9 +457,9 @@
                   <span class="wlc-ex-tag">出题</span>
                   <span class="wlc-ex-q">"出 10 道二次函数选择题，要包含 a/b/c 系数判断"</span>
                 </button>
-                <button class="wlc-ex" onclick="tryExampleQuestion('找出八(3)班最近 3 次月考的薄弱点')">
-                  <span class="wlc-ex-tag">学情</span>
-                  <span class="wlc-ex-q">"找出八(3)班最近 3 次月考的薄弱点"</span>
+                <button class="wlc-ex" onclick="tryExampleQuestion('根据这份月考试卷，帮我写一页讲评提纲')">
+                  <span class="wlc-ex-tag">讲评</span>
+                  <span class="wlc-ex-q">"根据这份月考试卷，帮我写一页讲评提纲"</span>
                 </button>
                 <button class="wlc-ex" onclick="tryExampleQuestion('去年讲过的二次函数那张 PPT 在哪')">
                   <span class="wlc-ex-tag">检索</span>
@@ -499,7 +499,7 @@
               </div>
               <div class="wlc-video-cap">
                 <div class="wlc-video-title">飞象 AI · 2 分钟使用导览</div>
-                <div class="wlc-video-sub">看完你就懂怎么用了</div>
+                <div class="wlc-video-sub">先搭知识库，再让 AI 做事</div>
               </div>
               <div class="wlc-video-time">2:30</div>
             </div>
@@ -507,8 +507,8 @@
 
           <!-- 一句话介绍 -->
           <p class="wlc-doc-lede">
-            飞象 AI 是<b>读过你备课资料的 AI 助手</b>。
-            跟通用 AI 不一样：它能基于你的真题、课件、错例帮你做事，不是凭空写。
+            飞象 AI 的第一步，不是让你写复杂提示词，而是先把你的备课资料变成 AI 能引用的上下文。
+            资料越完整，它越能沿着你的课件、真题、错例和讲法来生成内容。
           </p>
 
           <!-- v3.5 二轮：「知识库 vs 题目」心智锚点 — 让老师从 Day 0 就理解派生关系
@@ -517,46 +517,46 @@
             <div class="wlc-mm-icon"><i data-lucide="library"></i></div>
             <div class="wlc-mm-body">
               <p>
-                <strong>「我的知识库」存你所有的资料</strong>（文件、文件夹原样保留，AI 不动）；
-                <strong>「我的题目」是知识库里的题</strong>——AI 自动从你的文件抽出来归到这里，方便<em>找题 / 出题</em>。
+                <strong>「我的知识库」是给 AI 用的资料柜</strong>：文件和文件夹原样保留，AI 只读取、索引、引用，不替你改原件；
+                <strong>「我的题目」是从资料里整理出的单题</strong>，方便以后按知识点、题型、难度<em>找题 / 出题</em>。
               </p>
               <p>
-                上传永远是进知识库。文件里如果有题，AI 会抽出来归到「我的题目」待你审核——原文件还在知识库，不会被改动或挪走。
+                你只需要先把资料放进来。文件里如果有题，AI 可以帮你整理成题目待审核；原文件仍留在知识库里，不会被改动或挪走。
               </p>
             </div>
           </aside>
 
           <!-- 三步上手 -->
           <section class="wlc-section">
-            <h2 class="wlc-h2">三步上手</h2>
+            <h2 class="wlc-h2">三步搭好你的知识库</h2>
             <ol class="wlc-steps">
               <li class="wlc-step">
                 <div class="wlc-step-n">1</div>
                 <div class="wlc-step-body">
-                  <div class="wlc-step-t">把你的备课资料喂给我</div>
+                  <div class="wlc-step-t">先把常用资料放进来</div>
                   <div class="wlc-step-d">
-                    PPT、Word、PDF、图片都可以，AI 会读懂内容。
-                    含题的试卷会被 AI 自动抽出题入<b>「我的题目」</b>，方便你以后组卷。
+                    PPT、Word、PDF、图片都可以。先放课件、教案、试卷、错题这些高频材料，
+                    AI 才有可靠的依据可用。
                   </div>
                 </div>
               </li>
               <li class="wlc-step">
                 <div class="wlc-step-n">2</div>
                 <div class="wlc-step-body">
-                  <div class="wlc-step-t">在右栏问我，关于这些资料的都行</div>
+                  <div class="wlc-step-t">让 AI 基于这些资料回答</div>
                   <div class="wlc-step-d">
-                    "改成 8 年级难度"、"出 10 道变式题"、"找出薄弱点"——
-                    我会基于<b>你的</b>资料回答，引用具体页码、题号。
+                    "按去年课件改一版导入"、"从这套题出 10 道变式"、"把这份试卷写成讲评提纲"——
+                    我会尽量引用具体文件、页码或题号。
                   </div>
                 </div>
               </li>
               <li class="wlc-step">
                 <div class="wlc-step-n">3</div>
                 <div class="wlc-step-body">
-                  <div class="wlc-step-t">满意的内容，一键保存到知识库</div>
+                  <div class="wlc-step-t">有用的产出再保存</div>
                   <div class="wlc-step-d">
-                    AI 写的东西不会自动进文件夹。每次产出后可以
-                    <b>「保存到我的知识库」</b>一键入库——没保存的也能从左栏
+                    AI 生成的教案片段、题目、讲评稿不会自动进文件夹。确认能用后，再点
+                    <b>「保存到我的知识库」</b>入库；没保存的也能从左栏
                     <b>「最近对话」</b>找回。
                   </div>
                 </div>
@@ -566,27 +566,27 @@
 
           <!-- 4 个常用场景 -->
           <section class="wlc-section">
-            <h2 class="wlc-h2">4 个常用场景</h2>
+            <h2 class="wlc-h2">资料放进来后，最常用的 4 件事</h2>
             <div class="wlc-scenes">
               <div class="wlc-scene">
                 <div class="wlc-scene-icon"><i data-lucide="book-open"></i></div>
                 <div class="wlc-scene-t">备课</div>
-                <div class="wlc-scene-d">基于你的旧课件，改难度 / 改情境 / 加导入环节，10 秒出片段。</div>
+                <div class="wlc-scene-d">基于你的旧课件和教案，改难度、换情境、补导入或课堂追问。</div>
               </div>
               <div class="wlc-scene">
                 <div class="wlc-scene-icon"><i data-lucide="file-edit"></i></div>
                 <div class="wlc-scene-t">出题</div>
-                <div class="wlc-scene-d">从你的真题出变式题，带答案与解析；可以指定题型、难度、知识点。</div>
+                <div class="wlc-scene-d">从你上传的真题、题单、错题里出变式，带答案与解析。</div>
               </div>
               <div class="wlc-scene">
                 <div class="wlc-scene-icon"><i data-lucide="line-chart"></i></div>
-                <div class="wlc-scene-t">学情</div>
-                <div class="wlc-scene-d">你班这次月考薄弱点是什么？AI 帮你拉数据、写讲评要点。</div>
+                <div class="wlc-scene-t">讲评</div>
+                <div class="wlc-scene-d">围绕一份试卷或错题集，整理讲评提纲、重点题和课堂追问。</div>
               </div>
               <div class="wlc-scene">
                 <div class="wlc-scene-icon"><i data-lucide="search"></i></div>
                 <div class="wlc-scene-t">检索</div>
-                <div class="wlc-scene-d">"去年那张二次函数 PPT 在哪？"——AI 帮你按内容找回，不靠记文件名。</div>
+                <div class="wlc-scene-d">"去年那张二次函数 PPT 在哪？"——按内容找回资料，不靠记文件名。</div>
               </div>
             </div>
           </section>
@@ -597,11 +597,11 @@
             <div class="wlc-privacy">
               <i data-lucide="lock" class="wlc-privacy-i"></i>
               <div class="wlc-privacy-body">
-                <div class="wlc-privacy-t">你的资料只属于你</div>
+                <div class="wlc-privacy-t">你的资料，你说了算</div>
                 <ul class="wlc-privacy-list">
-                  <li><b>不进通用模型</b>，不会被其他老师看到</li>
-                  <li>可以随时删除任何文件，删掉就真的删掉</li>
-                  <li>AI 引用了哪份文件、哪一页，每次都会告诉你</li>
+                  <li><b>不拿去训练通用模型</b>，不会被其他老师看到</li>
+                  <li>AI 不改原文件；保存、删除、整理都由你确认</li>
+                  <li>能引用依据时，会告诉你来自哪份文件、哪一页或哪道题</li>
                 </ul>
               </div>
             </div>
@@ -724,7 +724,7 @@
       <div class="chat-composer-foot">
         <button class="composer-pill" title="附件"><i data-lucide="paperclip"></i>附件</button>
         <!-- @引用：体现"知识库 vs 外部 sources" 的产品架构哲学
-             v1：仅「我的知识库」可用；学情/作文需买对应飞象产品（灰色置灰）
+             当前仅「我的知识库」可用；更多数据源后续开放
              这个 UI 在 v1 就传达"知识库可独立 + 多产品打通是加分"的概念 -->
         <div class="composer-cite-wrap">
           <button class="composer-pill" title="@引用 sources" onclick="toggleCiteMenu(event)">
@@ -740,13 +740,13 @@
               </div>
               <i data-lucide="check" class="cite-chk"></i>
             </div>
-            <div class="cite-item disabled" title="需购买飞象作业产品">
+            <div class="cite-item disabled" title="后续开放">
               <i data-lucide="bar-chart-3" class="cite-i"></i>
               <div class="cite-text">
-                <div class="cite-t">学情数据</div>
-                <div class="cite-s">需购买 飞象作业 · 学生作答数据</div>
+                <div class="cite-t">更多数据源</div>
+                <div class="cite-s">后续可引用作业、作文等外部资料</div>
               </div>
-              <span class="cite-lock">解锁</span>
+              <span class="cite-lock">即将开放</span>
             </div>
             <div class="cite-item disabled" title="需购买飞象作文产品">
               <i data-lucide="file-text" class="cite-i"></i>
