@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>飞象 AI · 日常工作台</title>
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/lucide@latest" defer onload="window.renderLucideIcons ? window.renderLucideIcons() : (window.lucide && lucide.createIcons())"></script>
 <link rel="stylesheet" href="kb-workbench.css" />
 </head>
 <body data-page="workbench" data-scene="daily">
@@ -31,22 +31,6 @@
   </button>
 
   <div class="topbar-actions">
-    <!-- v3.6：上传 = 唯一日常入口（顶栏，全局可见，所有 state 都可点）
-         右键「导入到这里」、入门指南底部 CTA、题库「上传含题文件」、中栏顶部 banner 全部砍掉
-         设计原则：老师只需记 1 个上传入口
-         点击行为：同标签跳转 upload.html，与首次从文件上传流程保持一致 -->
-    <button class="top-btn" title="上传文件 / 文件夹 / 压缩包" onclick="openUploadWindow()">
-      <i data-lucide="plus"></i>
-      上传
-    </button>
-
-    <!-- 新对话：与「上传」并列的全局动作 — 上传 = 资料进，新对话 = 问 AI
-         点击后进 focus-chat 模式，复用 enterChatOnlyMode；同时退出可能的回顾态 -->
-    <button class="top-btn" id="topbar-new-chat" title="新建对话" onclick="startNewChatFromTopbar()">
-      <i data-lucide="message-circle-plus"></i>
-      新对话
-    </button>
-
     <!-- v3.5 新增：通知中心 — 异步任务（AI 切题、入库、归类）的统一收件箱
          设计原则：AI 不弹气泡打扰老师，所有"AI 完成事情"的反馈收敛到这个铃铛
          老师传完文件可以立刻去做别的事，AI 跑完了在这里查 -->
@@ -78,12 +62,13 @@
       <div class="asset-cluster">
         <div class="nav-label asset-root-label" onclick="navToKnowledgeBase()" title="点击回到主页" style="cursor:pointer">
           我的知识库
-          <span class="label-action" title="新建文件夹" onclick="event.stopPropagation();createNewFolder()"><i data-lucide="folder-plus"></i></span>
+          <button class="label-action" type="button" title="新建文件夹" onclick="event.stopPropagation();createNewFolder()"><i data-lucide="folder-plus"></i></button>
         </div>
 
         <div class="asset-sub-label clickable file-view-label active" onclick="navToKnowledgeBase()" title="按文件夹浏览所有资料">
           <i data-lucide="folder" class="asset-type-icon"></i>
           <span>文件</span>
+          <button class="label-action" type="button" title="上传资料" onclick="event.stopPropagation();openUploadWindow()"><i data-lucide="upload"></i></button>
         </div>
         <div class="asset-file-tree">
 
@@ -234,6 +219,7 @@
       <div class="nav-label recent-chat-label" onclick="toggleRecentChatSection()">
         <i data-lucide="messages-square" class="nav-label-icon"></i>
         <span>最近对话</span>
+        <button class="label-action" type="button" title="新建对话" onclick="event.stopPropagation();startNewChatFromTopbar()"><i data-lucide="message-circle-plus"></i></button>
         <span class="recent-chat-count" id="nav-recent-chat-count">12</span>
       </div>
       <div class="recent-chat-list" id="recent-chat-list">
@@ -339,8 +325,8 @@
       <div class="state state-default" data-state="default">
 
         <div class="zen-greet">
-          <h1 class="zen-greet-h1">张老师，下午好。</h1>
-          <p class="zen-greet-sub">28 份素材在你左手边。需要时，叫右手边的 AI。</p>
+          <h1 class="zen-greet-h1">张老师，下午好</h1>
+          <p class="zen-greet-sub">已整理 28 份资料。你可以直接搜索，或让飞象基于资料生成内容。</p>
         </div>
 
         <!-- 导入完成总览卡片（一次性，刚 onboarding 完才显示） -->
@@ -471,6 +457,40 @@
 
       </div><!-- /默认态 -->
 
+      <div class="state state-upload" data-state="upload">
+        <div class="zen-empty">
+          <h1 class="zen-h1">张老师，开始搭建知识库</h1>
+          <p class="zen-sub">
+            先上传常用的课件、教案、试卷和错题。<br>
+            飞象会保留原文件结构，并把资料转成 AI 可引用的上下文。<br>
+            之后备课、出题、找资料，都可以基于这批资料开始。
+          </p>
+
+          <div class="zen-dropzone"
+               onclick="mockSelectFiles()"
+               ondragenter="zenDragEnter(event)"
+               ondragover="event.preventDefault()"
+               ondragleave="zenDragLeave(event)"
+               ondrop="mockSelectFiles()">
+            <div class="zen-dz-content">
+              <div class="zen-dz-icon"><i data-lucide="upload-cloud"></i></div>
+              <div class="zen-dz-main">
+                <div class="zen-dz-title">上传资料</div>
+                <div class="zen-dz-cta">拖拽课件 / 教案 / 试卷 / 图片到这里</div>
+              </div>
+              <div class="zen-dz-action">
+                <span>点击选择</span>
+                <i data-lucide="arrow-right"></i>
+              </div>
+            </div>
+            <div class="zen-dz-active">
+              <i data-lucide="check-circle-2"></i>
+              <span>松手即可上传</span>
+            </div>
+          </div>
+        </div>
+      </div><!-- /上传态 -->
+
     </div>
   </section>
 
@@ -576,7 +596,7 @@
       <div class="chat-composer-foot">
         <button class="composer-pill" title="附件"><i data-lucide="paperclip"></i>附件</button>
         <!-- @引用：体现"知识库 vs 外部 sources" 的产品架构哲学
-             v1：仅「我的知识库」可用；学情/作文需买对应飞象产品（灰色置灰）
+             当前仅「我的知识库」可用；更多数据源后续开放
              这个 UI 在 v1 就传达"知识库可独立 + 多产品打通是加分"的概念 -->
         <div class="composer-cite-wrap">
           <button class="composer-pill" title="@引用 sources" onclick="toggleCiteMenu(event)">
@@ -592,13 +612,13 @@
               </div>
               <i data-lucide="check" class="cite-chk"></i>
             </div>
-            <div class="cite-item disabled" title="需购买飞象作业产品">
+            <div class="cite-item disabled" title="后续开放">
               <i data-lucide="bar-chart-3" class="cite-i"></i>
               <div class="cite-text">
-                <div class="cite-t">学情数据</div>
-                <div class="cite-s">需购买 飞象作业 · 学生作答数据</div>
+                <div class="cite-t">更多数据源</div>
+                <div class="cite-s">后续可引用作业、作文等外部资料</div>
               </div>
-              <span class="cite-lock">解锁</span>
+              <span class="cite-lock">即将开放</span>
             </div>
             <div class="cite-item disabled" title="需购买飞象作文产品">
               <i data-lucide="file-text" class="cite-i"></i>

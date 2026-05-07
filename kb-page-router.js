@@ -9,6 +9,7 @@
     qbank: '04-qbank.html',
     'qbank-empty': '04-qbank.html',
     'recent-chat-view': '05-recent-chat.html',
+    upload: '02-workbench.html?scene=upload',
     welcome: '06-welcome-guide.html',
     'welcome-doc': '06-welcome-guide.html'
   };
@@ -33,7 +34,12 @@
   };
 
   window.openUploadWindow = function(){
-    window.location.href = '07-upload.html';
+    if(page === 'empty-onboarding'){
+      window.setState('empty');
+      document.getElementById('zen-dropzone')?.scrollIntoView({block:'center'});
+      return;
+    }
+    window.location.href = '02-workbench.html?scene=upload';
   };
 
   if(page === 'welcome-guide'){

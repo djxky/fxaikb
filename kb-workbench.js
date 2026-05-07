@@ -1,4 +1,15 @@
 // ============ 知识图谱：跳转研发实时数据 demo ============
+  function renderLucideIcons(retry = 0){
+    if(window.lucide && typeof lucide.createIcons === 'function'){
+      lucide.createIcons();
+      return;
+    }
+    if(retry < 20){
+      setTimeout(()=>renderLucideIcons(retry + 1), 120);
+    }
+  }
+  window.renderLucideIcons = renderLucideIcons;
+
   // 决策（2026-05-07）：v1 阶段不再自建知识图谱可视化，复用研发已上线的 Wiki 血缘图 demo。
   // 理由：① 数据真实（KB 3 实数据）② 零开发 ③ 避免我们/研发两份图将来分裂。
   // 风险：URL 是 fedebug 联调环境，有可能 404 / 改路径，演示前需手动验证一次。
@@ -39,9 +50,9 @@
     const sub = document.getElementById('chat-context-subtitle');
     const cphHead = document.querySelector('.chat-panel-head');
 
-    cphHead.classList.remove('empty-state');
+    if(cphHead) cphHead.classList.remove('empty-state');
     const sbR = document.getElementById('sidebar-right');
-    sbR.classList.remove('empty');
+    if(sbR) sbR.classList.remove('empty');
     if(state === 'source'){
       ctx.style.display = 'inline-flex';
       sub.textContent = '已锁定当前文件';
@@ -59,8 +70,8 @@
       sub.textContent = '浏览知识图谱中';
     }else if(state === 'empty' || state === 'onboarding-scan' || state === 'onboarding-progress'){
       ctx.style.display = 'none';
-      cphHead.classList.add('empty-state');
-      sbR.classList.add('empty');
+      if(cphHead) cphHead.classList.add('empty-state');
+      if(sbR) sbR.classList.add('empty');
       if(state === 'empty')                 sub.textContent = '需要时叫我';
       if(state === 'onboarding-scan')       sub.textContent = '需要时叫我';
       if(state === 'onboarding-progress')   sub.textContent = '需要时叫我';
@@ -77,7 +88,7 @@
     if(fileLbl) fileLbl.classList.toggle('active', !isQbankState);
     if(qbkLbl)  qbkLbl.classList.toggle('active', isQbankState);
 
-    if(window.lucide) lucide.createIcons();
+    renderLucideIcons();
   }
 
   /* 打开 AI 产物文件预览（从对话气泡里的 Artifact 卡片触发）
@@ -325,7 +336,7 @@
 
     const ctxName = document.getElementById('composer-context-name');
     if(ctxName) ctxName.textContent = name + ext;
-    if(window.lucide) lucide.createIcons();
+    renderLucideIcons();
   }
 
   function _renderWelcomeGuideFallbackInRecentView(name, ext){
@@ -913,6 +924,7 @@
   /* 缓存原始 source 预览 HTML（首次访问时锁定，后续恢复用） */
   let _ORIGINAL_SOURCE_PREVIEW_HTML = '';
   document.addEventListener('DOMContentLoaded', function(){
+    renderLucideIcons();
     const orig = document.querySelector('.state-source .source-preview');
     if(orig) _ORIGINAL_SOURCE_PREVIEW_HTML = orig.innerHTML;
   });
@@ -1703,8 +1715,7 @@
     const isOpen = group.classList.contains('open');
   }
 
-  // 添加抽屉
-  // v3.6：上传 = 同标签跳转 upload.html，与首次从文件上传流程保持一致
+  // 上传：优先在当前工作台中栏打开，保留左栏目录和右栏 AI
   // 顶栏「+ 新对话」：先退出可能正在回顾的历史对话，再进入 focus-chat 欢迎页
   // 替代原右栏 cph-new-chat-btn 的双重职责（新建 / 退出回顾）
   function startNewChatFromTopbar(){
@@ -1717,12 +1728,16 @@
   }
 
   function openUploadWindow(){
-    window.location.href = 'upload.html';
+    if(document.querySelector('.state[data-state="upload"]')){
+      setState('upload');
+      return;
+    }
+    window.location.href = '02-workbench.html?scene=upload';
   }
 
   // 旧抽屉的兼容函数（保留：万一某些遗漏入口还在调用，不会报错）
   function openImportDrawer(){
-    // 兼容兜底：直接走上传页
+    // 兼容兜底：直接走工作台上传态
     openUploadWindow();
   }
   function closeImportDrawer(){
@@ -1851,7 +1866,10 @@
   // 改造意图：① 老师不被 block ② 反馈走通知中心，不弹气泡 ③ 单文件落点 = 根目录/未分类（A 方案，老师可手动拖）
   function mockSelectFiles(){
     closeImportDrawer();
-    showToast('✓ 3 个文件已加入知识库 · AI 在后台抽题归到「我的题目」，进度看右上角铃铛');
+    if(document.querySelector('.state[data-state="upload"]')){
+      setState('default');
+    }
+    showToast('✓ 3 个文件已加入知识库 · AI 在后台处理，进度看右上角铃铛');
     startNotifProgressDemo();
   }
   function pasteHint(){
@@ -1910,7 +1928,7 @@
     // 根据场景设置左栏空/满 + 中栏状态
     const setEmpty = ()=>{
       sbL.classList.add('empty');
-      if(recentChatCountEl) recentChatCountEl.textContent = '1';
+      if(recentChatCountEl) recentChatCountEl.textContent = '0';
     };
     const setFilled = ()=>{
       sbL.classList.remove('empty');
@@ -1942,6 +1960,11 @@
         setFilled();
         setState('default');
         // 演示老用户态时一并标记 visited（避免之后无 scene 参数刷新还看到首次态）
+        try{ localStorage.setItem('feixiang_visited', '1'); }catch(e){}
+        break;
+      case 'upload':
+        setFilled();
+        setState('upload');
         try{ localStorage.setItem('feixiang_visited', '1'); }catch(e){}
         break;
       case 'qbank':
@@ -1982,7 +2005,7 @@
         }, 30);
     }
 
-    // v3.6：upload.html 同标签上传完成后回跳到工作台，用参数/会话标记触发同一套异步通知流程
+    // v3.6：上传页同标签上传完成后回跳到工作台，用参数/会话标记触发同一套异步通知流程
     const shouldRunUploadDone =
       params.get('uploadDone') === '1' ||
       (sessionStorage.getItem('feixiang_upload_done') === '1');

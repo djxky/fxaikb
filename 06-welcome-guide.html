@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>飞象 AI · 入门指南</title>
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/lucide@latest" defer onload="window.renderLucideIcons ? window.renderLucideIcons() : (window.lucide && lucide.createIcons())"></script>
 <link rel="stylesheet" href="kb-workbench.css" />
 </head>
 <body data-page="welcome-guide" data-scene="welcome-doc">
@@ -84,22 +84,6 @@
       </div>
     </div>
 
-    <!-- v3.6：上传 = 唯一日常入口（顶栏，全局可见，所有 state 都可点）
-         右键「导入到这里」、入门指南底部 CTA、题库「上传含题文件」、中栏顶部 banner 全部砍掉
-         设计原则：老师只需记 1 个上传入口
-         点击行为：同标签跳转 upload.html，与首次从文件上传流程保持一致 -->
-    <button class="top-btn" title="上传文件 / 文件夹 / 压缩包" onclick="openUploadWindow()">
-      <i data-lucide="plus"></i>
-      上传
-    </button>
-
-    <!-- 新对话：与「上传」并列的全局动作 — 上传 = 资料进，新对话 = 问 AI
-         点击后进 focus-chat 模式，复用 enterChatOnlyMode；同时退出可能的回顾态 -->
-    <button class="top-btn" id="topbar-new-chat" title="新建对话" onclick="startNewChatFromTopbar()">
-      <i data-lucide="message-circle-plus"></i>
-      新对话
-    </button>
-
     <!-- v3.5 新增：通知中心 — 异步任务（AI 切题、入库、归类）的统一收件箱
          设计原则：AI 不弹气泡打扰老师，所有"AI 完成事情"的反馈收敛到这个铃铛
          老师传完文件可以立刻去做别的事，AI 跑完了在这里查 -->
@@ -131,12 +115,13 @@
       <div class="asset-cluster">
         <div class="nav-label asset-root-label" onclick="navToKnowledgeBase()" title="点击回到主页" style="cursor:pointer">
           我的知识库
-          <span class="label-action" title="新建文件夹" onclick="event.stopPropagation();createNewFolder()"><i data-lucide="folder-plus"></i></span>
+          <button class="label-action" type="button" title="新建文件夹" onclick="event.stopPropagation();createNewFolder()"><i data-lucide="folder-plus"></i></button>
         </div>
 
         <div class="asset-sub-label clickable file-view-label active" onclick="navToKnowledgeBase()" title="按文件夹浏览所有资料">
           <i data-lucide="folder" class="asset-type-icon"></i>
           <span>文件</span>
+          <button class="label-action" type="button" title="上传资料" onclick="event.stopPropagation();openUploadWindow()"><i data-lucide="upload"></i></button>
         </div>
         <div class="asset-file-tree">
 
@@ -287,6 +272,7 @@
       <div class="nav-label recent-chat-label" onclick="toggleRecentChatSection()">
         <i data-lucide="messages-square" class="nav-label-icon"></i>
         <span>最近对话</span>
+        <button class="label-action" type="button" title="新建对话" onclick="event.stopPropagation();startNewChatFromTopbar()"><i data-lucide="message-circle-plus"></i></button>
         <span class="recent-chat-count" id="nav-recent-chat-count">12</span>
       </div>
       <div class="recent-chat-list" id="recent-chat-list">
@@ -612,7 +598,7 @@
                理由：入口收敛 — 入门指南底部的"上传"诉求 = 顶栏「+ 添加」诉求 = 同一个抽屉 -->
           <div class="wlc-doc-cta">
             <button class="wlc-btn primary" onclick="openImportDrawer()">
-              <i data-lucide="upload-cloud"></i>开始上传我的资料
+              <i data-lucide="upload-cloud"></i>上传资料
             </button>
           </div>
         </article>

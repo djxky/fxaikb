@@ -890,15 +890,18 @@
     letter-spacing:.06em;font-weight:500;text-transform:uppercase;
     display:flex;align-items:center;gap:6px;
   }
-  .nav-label .label-action{
+  .nav-label .label-action,
+  .asset-sub-label .label-action{
     margin-left:auto;width:18px;height:18px;border-radius:4px;
     display:grid;place-items:center;color:#A8A39B;cursor:pointer;
+    border:0;background:transparent;padding:0;font:inherit;
   }
-  .nav-label .label-action:hover{background:rgba(0,0,0,.06);color:#3A3A3A}
-  .nav-label .label-action [data-lucide]{width:11px;height:11px}
+  .nav-label .label-action:hover,
+  .asset-sub-label .label-action:hover{background:rgba(0,0,0,.06);color:#3A3A3A}
+  .nav-label .label-action [data-lucide],
+  .asset-sub-label .label-action [data-lucide]{width:11px;height:11px}
 
-  /* 「最近对话」一级实体（跟上方「我的知识库」资产组并列）
-     视觉：金色 messages 图标 + 金色计数，与"AI 写的"金色 ✦ 标识一致 */
+  /* 「最近对话」一级实体（跟上方「我的知识库」资产组并列） */
   .nav-label.recent-chat-label{
     padding-top:18px;cursor:pointer;
     border-top:1px solid #ECE9E2;margin-top:8px;
@@ -907,24 +910,29 @@
   .nav-label.recent-chat-label .nav-label-icon{
     width:11px;height:11px;color:#C9A76E;flex-shrink:0;
   }
-  .nav-label.recent-chat-label .recent-chat-count{
-    margin-left:auto;
-    font-size:10.5px;color:#A87E2C;font-weight:600;
-    padding:1px 6px;border-radius:8px;
-    background:rgba(201,167,110,.14);
-    font-variant-numeric:tabular-nums;
-    transition:transform .25s cubic-bezier(.5,1.6,.4,.95);
-  }
-  .nav-label.recent-chat-label .recent-chat-count.bump{
-    transform:scale(1.18);
-    background:rgba(201,167,110,.32);
-  }
+  .nav-label.recent-chat-label .recent-chat-count{display:none}
   .nav-label.recent-chat-label:hover{color:#7A5615}
   .nav-label.recent-chat-label:hover .nav-label-icon{color:#A87E2C}
 
   /* 最近对话列表区 */
   .recent-chat-list{padding-bottom:6px}
   .recent-chat-list.collapsed{display:none}
+  .sidebar-left:not(.empty) .recent-chat-empty-note{display:none}
+  .recent-chat-list .recent-chat-time,
+  .recent-chat-list .rc-art-badge,
+  .recent-chat-list .tree-more-link{display:none}
+  .recent-chat-list .tree-row.recent-chat .tree-label{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .recent-chat-empty-note{
+    padding:6px 0 2px 22px;
+    font-size:11.5px;
+    line-height:1.5;
+    color:#A8A39B;
+  }
 
   /* 左栏资产分组：「我的知识库」= 容器，下挂两种"浏览方式"
      v3.6 P0-1：把 sub-label 从"实体名"升级为"浏览动作"
@@ -2052,8 +2060,8 @@
   .rcv-art-btn.ghost:hover{background:#FAFAF8;color:#1A1A1A;border-color:#C8C2B6}
   .rcv-art-btn.ghost [data-lucide]{color:#7A766F}
 
-  /* 左栏「最近对话」列表项的产物计数 badge — 让老师一眼看出哪条对话有产物 */
-  .recent-chat-list .recent-chat-time{display:inline-flex;align-items:center;gap:6px}
+  /* 左栏「最近对话」按 AI 产品常见样式收敛：只显示标题 */
+  .recent-chat-list .recent-chat-time{display:none}
   .rc-art-badge{
     display:inline-flex;align-items:center;gap:2px;
     font-size:10.5px;color:#A87E2C;font-weight:500;
@@ -2062,6 +2070,8 @@
   }
   .rc-art-badge [data-lucide]{width:10px;height:10px;color:#A87E2C}
   .tree-row.recent-chat:hover .rc-art-badge{background:rgba(201,167,110,.22)}
+  .recent-chat-list .rc-art-badge,
+  .recent-chat-list .tree-more-link{display:none}
 
   /* ===== 入门指南文件预览态（state-welcome-doc）=====
      设计：跟普通 source 文件预览同结构（面包屑 + 头部 + body）
@@ -3379,7 +3389,7 @@
   /* 题库子树（学科行）：空态隐藏，仅留「我的题库 (0)」标题 */
   .sidebar-left.empty .qbank-tree{display:none}
   /* 最近对话区：空状态 = 隐藏其他对话，仅保留入门指南（welcome） */
-  .sidebar-left.empty .recent-chat-list .tree-row:not(.welcome){display:none}
+  .sidebar-left.empty .recent-chat-list .tree-row{display:none}
   /* 空状态时计数变弱（0/1 不显眼） */
   .sidebar-left.empty .recent-chat-label .recent-chat-count{
     background:transparent;color:#A8A39B;font-weight:500;
