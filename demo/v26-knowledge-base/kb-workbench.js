@@ -2121,6 +2121,12 @@
     let scene = params.get('scene') || document.body.dataset.scene || '';
     if(!scene && (params.get('ready') === '1' || params.get('demo') === '1')) scene = 'daily';
 
+    // 深链：最近对话页带 ?chat= 时禁止回落 scene=new，否则会走 default 分支并在 30ms 调用
+    // openRecentChat('chat-welcome')（入门对话），覆盖或早于 URL 指定的会话。
+    if(document.body && document.body.dataset.page === 'recent-chat' && params.get('chat')){
+      scene = 'recent-chat';
+    }
+
     // === v3.5 三层默认状态规则 ===
     // 无显式 scene 时，根据 localStorage 决定（真实产品逻辑）
     // 显式 scene=new 时强制清 localStorage 重新走首次流程（演示用）
