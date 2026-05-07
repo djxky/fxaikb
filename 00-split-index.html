@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>飞象 AI · 知识库演示顺序</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css" />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#F7F6F3;color:#1A1A1A;min-height:100vh}
+  .wrap{max-width:1080px;margin:0 auto;padding:64px 28px 80px}
+  .eyebrow{font-size:12px;letter-spacing:.18em;color:#A87E2C;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+  h1{font-size:34px;letter-spacing:-.03em;margin-bottom:12px}
+  .sub{font-size:15px;color:#5A5550;line-height:1.8;max-width:720px;margin-bottom:34px}
+  .section{margin:34px 0 18px;font-size:12px;letter-spacing:.16em;color:#8A7650;text-transform:uppercase;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  a,.note{display:block;background:#fff;border:1px solid #ECE9E2;border-radius:14px;padding:22px;text-decoration:none;color:inherit;transition:.18s}
+  a:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(40,32,16,.08);border-color:#D8C9A8}
+  .num{width:30px;height:30px;border-radius:8px;background:#F0EDE7;color:#7A6840;display:grid;place-items:center;font-size:12px;font-weight:700;margin-bottom:16px}
+  .num.empty{background:#1A1A1A;color:#FBF7EE}
+  .num.unlock{background:#A87E2C;color:#fff}
+  h2{font-size:17px;margin-bottom:8px}
+  p{font-size:13px;color:#6B665F;line-height:1.7}
+  .tag{display:inline-flex;margin-bottom:10px;padding:3px 8px;border-radius:999px;background:#FBF7EE;border:1px solid #EFE3C8;color:#9A6F24;font-size:11px;font-weight:700}
+  .note{background:#FFFCF5;border-color:#EADBB8}
+  .foot{margin-top:28px;font-size:12px;color:#8A857E;line-height:1.8}
+  @media(max-width:760px){.wrap{padding:40px 18px 56px}.grid{grid-template-columns:1fr}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="eyebrow">Demo Script</div>
+  <h1>飞象 AI · 知识库完整演示顺序</h1>
+  <p class="sub">这页用来标记对外演示的正确顺序：上传前只展示空知识库和引导；完成上传后，再进入有素材、有题目、有对话记录的完整工作台。</p>
+
+  <div class="section">0 · 对外入口</div>
+  <section class="grid">
+    <a href="index.html"><div class="num">00</div><h2>正式分享入口</h2><p>发给同事的主链接。后续我会把它调整成默认从空态流程开始，而不是一上来展示全部有数据页面。</p></a>
+    <div class="note"><span class="tag">演示原则</span><h2>上传前保持空页面</h2><p>用户没有上传资料之前，不应该看到已有课件、已有题目、已有对话。否则“知识库由老师资料激活”的故事会断。</p></div>
+  </section>
+
+  <div class="section">1 · 上传前：空态和引导</div>
+  <section class="grid">
+    <a href="06-welcome-guide.html"><div class="num empty">01</div><h2>新老师入门指南</h2><p>先用预置对话和图文指南解释飞象能做什么。这里可以看，但不展示老师自己的资料。</p></a>
+    <a href="01-empty-onboarding.html"><div class="num empty">02</div><h2>首次导入首页</h2><p>核心空态页：“张老师，开始搭建知识库”。老师还没上传，所以主区域只给上传引导和空知识库心智。</p></a>
+    <div class="note"><span class="tag">上传前锁定</span><h2>工作台 / 题目 / 最近对话都应为空</h2><p>如果用户此时点到工作台、我的题目、最近对话，应该看到空态或回到上传引导，不展示 mock 内容。</p></div>
+  </section>
+
+  <div class="section">2 · 上传动作：激活知识库</div>
+  <section class="grid">
+    <a href="02-workbench.html?scene=upload"><div class="num unlock">03</div><h2>工作台内上传</h2><p>老师选择 PPT / Word / PDF / 图片 / 试卷。左侧目录和右侧 AI 保留，中栏展示上传入口。</p></a>
+    <div class="note"><span class="tag">关键转折</span><h2>上传完成 = 内容解锁</h2><p>只有完成上传后，才展示文件树、最近素材、题目、AI 引用源和历史对话。这是 demo 的叙事分界线。</p></div>
+  </section>
+
+  <div class="section">3 · 上传后：完整工作台流程</div>
+  <section class="grid">
+    <a href="02-workbench.html"><div class="num">04</div><h2>日常工作台</h2><p>上传后进入：左栏文件夹、中栏最近素材、右栏 AI 常驻，展示资料已经被接进来。</p></a>
+    <a href="03-file-preview.html"><div class="num">05</div><h2>文件预览</h2><p>打开课件/PDF，问 AI 关于当前文件的问题，体现“AI 基于你的素材回答”。</p></a>
+    <a href="04-qbank.html"><div class="num">06</div><h2>我的题目</h2><p>上传含题文件后，AI 识别题目并整理成可浏览、可加入题目篮的题目列表。</p></a>
+    <a href="05-recent-chat.html"><div class="num">07</div><h2>最近对话</h2><p>上传和使用之后，AI 产物可以被找回、继续追问，并保存到知识库。</p></a>
+  </section>
+
+  <div class="foot">后续对外分享建议：默认链接走 01 → 02 → 03 → 04 的主线；05-07 作为上传后的扩展演示。这个文件可一起上传，作为团队内部演示脚本。</div>
+</main>
+</body>
+</html>

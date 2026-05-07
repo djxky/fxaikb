@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>飞象 AI · 文件预览</title>
+<script src="https://unpkg.com/lucide@latest" defer onload="window.renderLucideIcons ? window.renderLucideIcons() : (window.lucide && lucide.createIcons())"></script>
+<link rel="stylesheet" href="kb-workbench.css?v=202605072008" />
+</head>
+<body data-page="file-preview" data-scene="source">
+<!-- ============ 顶栏（极简：折叠按钮 / 品牌 / 搜索 / 添加 / 折叠按钮）============
+     设计原则：识别 + 搜索 + 系统状态 + 唯一动作按钮（添加），不抢 AI 主入口心智 -->
+<header class="topbar">
+  <!-- 左栏折叠按钮（VSCode/Cursor/Notion 标准 pattern） -->
+  <button class="topbar-collapse" id="collapse-left" onclick="toggleSidebar('left')" title="收起 / 展开左栏">
+    <i data-lucide="panel-left-close"></i>
+  </button>
+
+  <div class="brand">
+    <span class="brand-mark">FX</span>
+    飞象 AI<span class="brand-sub">· 知识库</span>
+  </div>
+
+  <!-- 全局文件搜索触发器 ⌘K
+       设计意图：给「精确知道文件名」的老师一个最快路径
+       克制：宽度 240px、风格弱于「+ 添加」按钮，不抢 AI 主入口的心智 -->
+  <button class="topbar-search" onclick="openSpotlight()" title="按文件名快速找文件">
+    <i data-lucide="search"></i>
+    <span>按文件名找…</span>
+    <span class="kbd">⌘K</span>
+  </button>
+
+  <div class="topbar-actions">
+    <!-- 后台任务徽章（仅在 AI 后台处理素材时显示） -->
+    <div class="bg-task" id="bg-task" style="display:none" onclick="toggleBgTaskPanel()">
+      <svg class="bg-task-ring" viewBox="0 0 36 36">
+        <circle class="bg-task-ring-track" cx="18" cy="18" r="15.5"></circle>
+        <circle class="bg-task-ring-fill" id="bg-task-ring-fill" cx="18" cy="18" r="15.5"
+                stroke-dasharray="97.4" stroke-dashoffset="97.4"></circle>
+      </svg>
+      <span class="bg-task-pct" id="bg-task-pct">0</span>
+      <span class="bg-task-label">AI 准备中</span>
+    </div>
+
+    <!-- 后台任务详情面板（点徽章弹出） -->
+    <div class="bg-task-panel" id="bg-task-panel" style="display:none">
+      <div class="bgp-head">
+        <div class="bgp-h">AI 正在为你激活素材</div>
+        <div class="bgp-s">不影响使用 · 已处理的文件已可用</div>
+      </div>
+      <div class="bgp-list">
+        <div class="bgp-item done" id="bgp-task-1">
+          <div class="bgp-status"><i data-lucide="check"></i></div>
+          <div class="bgp-text">
+            <b>读取文件并保留原结构</b>
+            <span id="bgp-task-1-detail">247 / 247 个文件</span>
+          </div>
+        </div>
+        <div class="bgp-item doing" id="bgp-task-2">
+          <div class="bgp-status"><i data-lucide="loader"></i></div>
+          <div class="bgp-text">
+            <b>AI 自动打标签</b>
+            <span id="bgp-task-2-detail">已识别 0 个标签…</span>
+          </div>
+        </div>
+        <div class="bgp-item pending" id="bgp-task-3">
+          <div class="bgp-status">3</div>
+          <div class="bgp-text">
+            <b>抽取知识点 + 生成摘要</b>
+            <span>等待中</span>
+          </div>
+        </div>
+        <div class="bgp-item pending" id="bgp-task-4">
+          <div class="bgp-status">4</div>
+          <div class="bgp-text">
+            <b>建立关联与图谱</b>
+            <span>等待中</span>
+          </div>
+        </div>
+      </div>
+      <div class="bgp-foot">
+        <i data-lucide="info"></i>
+        <span>处理完成前，文件可正常预览，AI 答得越来越聪明。</span>
+      </div>
+    </div>
+
+    <!-- v3.5 新增：通知中心 — 异步任务（AI 切题、入库、归类）的统一收件箱
+         设计原则：AI 不弹气泡打扰老师，所有"AI 完成事情"的反馈收敛到这个铃铛
+         老师传完文件可以立刻去做别的事，AI 跑完了在这里查 -->
+    <button class="top-btn top-btn-notif" id="topbar-notif-btn" title="通知 · AI 任务进展" onclick="toggleNotifPanel()">
+      <i data-lucide="bell"></i>
+      <span class="notif-dot" id="notif-dot" style="display:none"></span>
+    </button>
+
+    <!-- 右栏（AI 对话）折叠按钮 -->
+    <button class="topbar-collapse" id="collapse-right" onclick="toggleSidebar('right')" title="收起 / 展开 AI 对话栏">
+      <i data-lucide="panel-right-close"></i>
+    </button>
+  </div>
+</header>
+
+<!-- ============ 主区域 ============ -->
+<main class="layout">
+
+  <!-- ============ 左栏 ============ -->
+  <aside class="sidebar-left" id="sidebar-left">
+    <div class="sidebar-scroll">
+
+      <!-- 设计原则：左栏 3 个一级实体（v2 范式调整）—
+           我的知识库（容器：文件 + 题目）+ 最近对话（与 AI 的互动史）
+           砍掉了原来的「全部素材 / 最近 7 天」（视图与目录心智混乱）
+           砍掉了「草稿」一级实体（AI 产物直接通过"保存到我的知识库"入库，无中间态）
+           为未来扩展预留：v2 会增加「校本知识库」「区域知识库」（只读层级） -->
+
+      <div class="asset-cluster">
+        <div class="nav-label asset-root-label" onclick="navToKnowledgeBase()" title="点击回到主页" style="cursor:pointer">
+          我的知识库
+          <button class="label-action" type="button" title="新建文件夹" onclick="event.stopPropagation();createNewFolder()"><i data-lucide="folder-plus"></i></button>
+        </div>
+
+        <div class="asset-sub-label clickable file-view-label active" onclick="navToKnowledgeBase()" title="按文件夹浏览所有资料">
+          <i data-lucide="folder" class="asset-type-icon"></i>
+          <span>文件</span>
+          <button class="label-action text-action" type="button" onclick="event.stopPropagation();openUploadWindow()">上传</button>
+        </div>
+        <div class="asset-file-tree">
+
+          <!-- 用户新建的文件夹会插入到这里之前
+               （新用户态下不再放冗余提示：标题 + [+] 按钮已经够说明） -->
+          <div id="user-folders-anchor"></div>
+
+      <!-- 数学 -->
+      <div class="tree-group open" data-group>
+        <div class="tree-row" onclick="toggleGroup(this)">
+          <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+          <span class="tree-label">数学</span>
+        </div>
+        <div class="tree-children">
+
+          <div class="tree-group open" data-group>
+            <div class="tree-row" onclick="toggleGroup(this)">
+              <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+              <span class="tree-label">八下·二次函数</span>
+            </div>
+            <div class="tree-children">
+              <div class="tree-row file leaf" onclick="openSource()">
+                <span class="tree-chevron"></span>
+                <span class="tree-label">二次函数图像与性质·导入课件<span class="file-ext">.pptx</span></span>
+              </div>
+              <div class="tree-row file leaf">
+                <span class="tree-chevron"></span>
+                <span class="tree-label">二次函数·教学设计<span class="file-ext">.docx</span></span>
+              </div>
+              <div class="tree-row file leaf">
+                <span class="tree-chevron"></span>
+                <span class="tree-label">函数综合·拔高训练<span class="file-ext">.pdf</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tree-group" data-group>
+            <div class="tree-row" onclick="toggleGroup(this)">
+              <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+              <span class="tree-label">八下·全等三角形</span>
+            </div>
+            <div class="tree-children">
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">SAS 判定·公开课<span class="file-ext">.pptx</span></span></div>
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">全等三角形·错题集训<span class="file-ext">.pdf</span></span></div>
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">板书照·全等条件梳理<span class="file-ext">.jpg</span></span></div>
+            </div>
+          </div>
+
+          <div class="tree-group" data-group>
+            <div class="tree-row" onclick="toggleGroup(this)">
+              <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+              <span class="tree-label">月考与中考</span>
+            </div>
+            <div class="tree-children">
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">2024 杭州中考真题<span class="file-ext">.pdf</span></span></div>
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">八(3)班·第一次月考<span class="file-ext">.pdf</span></span></div>
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">月考分析·讲评稿<span class="file-ext">.docx</span></span></div>
+            </div>
+          </div>
+
+          <div class="tree-group" data-group>
+            <div class="tree-row" onclick="toggleGroup(this)">
+              <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+              <span class="tree-label">临时·待整理</span>
+            </div>
+            <div class="tree-children">
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">学生手写·勾股扫描<span class="file-ext">.jpg</span></span></div>
+              <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">微信收藏·导入题<span class="file-ext">.png</span></span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 语文 -->
+      <div class="tree-group" data-group>
+        <div class="tree-row" onclick="toggleGroup(this)">
+          <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+          <span class="tree-label">语文</span>
+        </div>
+        <div class="tree-children">
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">朱自清·背影教案<span class="file-ext">.docx</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">岳阳楼记·课文精讲<span class="file-ext">.pptx</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">议论文写作·结构示范<span class="file-ext">.docx</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">八下古诗·背诵清单<span class="file-ext">.pdf</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">学生作文·我的家乡<span class="file-ext">.jpg</span></span></div>
+        </div>
+      </div>
+
+      <!-- 英语 -->
+      <div class="tree-group" data-group>
+        <div class="tree-row" onclick="toggleGroup(this)">
+          <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+          <span class="tree-label">英语</span>
+        </div>
+        <div class="tree-children">
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">Unit 5 Listening 课件<span class="file-ext">.pptx</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">完形填空·解题技巧<span class="file-ext">.pdf</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">Reading Comprehension 训练<span class="file-ext">.docx</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">七年级单词·音节图卡<span class="file-ext">.jpg</span></span></div>
+        </div>
+      </div>
+
+      <!-- 公开课资料 -->
+      <div class="tree-group" data-group>
+        <div class="tree-row" onclick="toggleGroup(this)">
+          <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+          <span class="tree-label">公开课资料</span>
+        </div>
+        <div class="tree-children">
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">勾股定理·古今证法<span class="file-ext">.pptx</span></span></div>
+          <div class="tree-row file leaf"><span class="tree-chevron"></span><span class="tree-label">教研组评课记录<span class="file-ext">.docx</span></span></div>
+        </div>
+      </div>
+        </div>
+
+      <!-- 题目：知识库里的结构化单题（AI 从文件抽出整理） -->
+      <div class="asset-sub-label clickable qbank-label" onclick="navToQBank()" title="知识库里的题 · AI 从你的文件抽出整理">
+        <i data-lucide="list-checks" class="asset-type-icon"></i>
+        <span>题目</span>
+      </div>
+      <div class="qbank-tree">
+        <div class="tree-row" onclick="navToQBank('math')">
+          <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+          <span class="tree-label">数学</span>
+          <span class="qbank-num">46</span>
+        </div>
+        <div class="tree-row" onclick="navToQBank('cn')">
+          <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+          <span class="tree-label">语文</span>
+          <span class="qbank-num">18</span>
+        </div>
+        <div class="tree-row" onclick="navToQBank('en')">
+          <span class="tree-chevron"><i data-lucide="chevron-right"></i></span>
+          <span class="tree-label">英语</span>
+          <span class="qbank-num">9</span>
+        </div>
+      </div>
+      </div>
+
+      <!-- ===== 最近对话（一级实体，跟上方「我的知识库」资产组并列）=====
+           设计哲学（v2 范式切换：从"草稿"→"对话"为中心）：
+           - 对话 = 老师跟 AI 的每一次互动（产物在对话上下文里）
+           - AI 写的内容直接通过「保存到我的知识库」一步入库（无中间"草稿"态）
+           - 没保存的对话产物也能从这里找回（按对话主题/时间检索）
+           - 入门指南作为预置的第 1 条对话（视觉一致，无特殊化）
+           - 心智借鉴：ChatGPT / Claude 的 Conversations -->
+      <div class="nav-label recent-chat-label" onclick="toggleRecentChatSection()">
+        <i data-lucide="messages-square" class="nav-label-icon"></i>
+        <span>最近对话</span>
+        <button class="label-action text-action" type="button" onclick="event.stopPropagation();startNewChatFromTopbar()">新对话</button>
+        <span class="recent-chat-count" id="nav-recent-chat-count">12</span>
+      </div>
+      <div class="recent-chat-list" id="recent-chat-list">
+        <!-- 入门指南（产品预置的第 1 条对话，v3.4 改为统一走 openRecentChat）
+             - 有产物（入门指南.html）→ 中栏自动打开 + 右栏对话历史 -->
+        <div class="tree-row file leaf recent-chat ai-source welcome" data-chat-id="chat-welcome" onclick="openRecentChat('chat-welcome')">
+          <span class="tree-arrow"></span>
+          <span class="tree-label">你好 · 介绍下你自己</span>
+          <span class="recent-chat-time">
+            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
+            今天
+          </span>
+        </div>
+        <!-- 老用户：3 条最近对话 + 查看全部
+             单条前置 ✦ 标识"跟 AI 聊过的"
+             右侧 .rc-art-badge 显示该对话产出的 AI 文件数 — 让"AI 写的东西在哪"可见 -->
+        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-fnxxk" onclick="openRecentChat('chat-fnxxk')">
+          <span class="tree-arrow"></span>
+          <span class="tree-label">设计一节函数复习课</span>
+          <span class="recent-chat-time">
+            <span class="rc-art-badge" title="该对话产出 2 份 AI 文件"><i data-lucide="file-text"></i>2</span>
+            10:08
+          </span>
+        </div>
+        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-bsst" onclick="openRecentChat('chat-bsst')">
+          <span class="tree-arrow"></span>
+          <span class="tree-label">出 10 道二次函数变式题</span>
+          <span class="recent-chat-time">
+            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
+            昨天
+          </span>
+        </div>
+        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-qdsjx" onclick="openRecentChat('chat-qdsjx')">
+          <span class="tree-arrow"></span>
+          <span class="tree-label">全等三角形错题讲评思路</span>
+          <span class="recent-chat-time">
+            <span class="rc-art-badge" title="该对话产出 1 份 AI 文件"><i data-lucide="file-text"></i>1</span>
+            04-22
+          </span>
+        </div>
+        <!-- v3.4 新增：演示一条无产物对话（focus-chat 模式） -->
+        <div class="tree-row file leaf recent-chat ai-source" data-chat-id="chat-noartifact" onclick="openRecentChat('chat-noartifact')">
+          <span class="tree-arrow"></span>
+          <span class="tree-label">问 a/b/c 系数原理</span>
+          <span class="recent-chat-time">
+            04-20
+          </span>
+        </div>
+        <div class="tree-row tree-more-link" onclick="showToast('对话历史完整视图开发中')">
+          <span class="tree-arrow"></span>
+          <span class="tree-label">查看全部 12 条…</span>
+        </div>
+      </div>
+
+      <div class="more-toggle" onclick="this.classList.toggle('open')">
+        <span class="arr">▸</span>
+        标签
+      </div>
+      <div class="more-content">
+        <div class="tag-cloud">
+          <span class="tag-chip">#几何</span>
+          <span class="tag-chip">#函数</span>
+          <span class="tag-chip">#方程</span>
+          <span class="tag-chip">#复习课</span>
+          <span class="tag-chip">#导入环节</span>
+          <span class="tag-chip">#课文精讲</span>
+          <span class="tag-chip">#写作</span>
+          <span class="tag-chip">#听力</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="sidebar-foot">
+      <div class="nav-item" id="nav-graph" onclick="openGraphDemo()" title="知识图谱 · 跳转研发实时数据 demo（新窗口）">
+        <i data-lucide="git-branch"></i>
+        <span class="nav-text">知识图谱</span>
+        <i data-lucide="external-link" class="nav-ext-icon"></i>
+      </div>
+      <!-- 「对话历史」已升为左栏一级实体（最近对话），此处不再重复 -->
+      <div class="nav-item">
+        <i data-lucide="settings"></i>
+        <span class="nav-text">设置</span>
+      </div>
+
+      <!-- 用户信息（飞象 AI 设计规范：账号在左下） -->
+      <div class="sidebar-user" title="账户与切换">
+        <div class="user-avatar">张</div>
+        <div class="user-info">
+          <div class="user-name">张老师</div>
+          <div class="user-meta">八年级数学</div>
+        </div>
+        <button class="user-more" title="账户菜单">
+          <i data-lucide="more-horizontal"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ 中栏 ============ -->
+  <section class="main-center" id="main-center">
+    <div class="main-inner">
+
+      <div class="state state-source" data-state="source">
+        <button class="source-back" onclick="setState('default')">
+          <i data-lucide="arrow-left"></i>
+          返回
+        </button>
+
+        <!-- 面包屑路径 -->
+        <nav class="src-breadcrumb">
+          <span class="src-bc-item" onclick="navToKnowledgeBase()">我的知识库</span>
+          <i data-lucide="chevron-right" class="src-bc-sep"></i>
+          <span class="src-bc-item" onclick="setState('default')">数学</span>
+          <i data-lucide="chevron-right" class="src-bc-sep"></i>
+          <span class="src-bc-item" onclick="setState('default')">八下·二次函数</span>
+          <i data-lucide="chevron-right" class="src-bc-sep"></i>
+          <span class="src-bc-item current">二次函数图像与性质 · 导入课件.pptx</span>
+        </nav>
+
+        <div class="source-head">
+          <div class="source-head-title src-file-name">二次函数图像与性质 · 导入课件</div>
+        </div>
+
+        <div class="source-preview">
+          <div class="preview-page">
+            <span class="pg-num">第 5 页 / 共 12 页</span>
+            <span>跳转：</span>
+            <span class="pg-num" style="cursor:pointer">1</span>
+            <span class="pg-num" style="cursor:pointer">5</span>
+            <span class="pg-num" style="cursor:pointer">8</span>
+            <span class="pg-num" style="cursor:pointer">12</span>
+          </div>
+          <div class="preview-h1">从喷泉的水柱到 y = ax² + bx + c</div>
+          <div class="preview-p">
+            观察喷泉水柱的运动轨迹，我们能得到什么数学模型？请同学们注意以下三个问题：
+          </div>
+          <ol class="preview-list">
+            <li>水柱的最高点在哪里？</li>
+            <li>水柱落地的两个位置之间有什么关系？</li>
+            <li>如果改变喷泉的喷射角度，曲线会怎样变化？</li>
+          </ol>
+          <div class="preview-formula">
+            y = ax² + bx + c &nbsp;&nbsp;(a ≠ 0)
+          </div>
+          <div class="preview-p">
+            <b>追问</b>：当 a 的正负发生变化时，抛物线的开口方向会怎样？请同桌之间互相说一说。
+          </div>
+          <div class="preview-img-placeholder">
+            [幻灯片插图：喷泉水柱与坐标系叠加示意图]
+          </div>
+        </div>
+      </div><!-- /素材态 -->
+
+    </div>
+  </section>
+
+    <aside class="sidebar-right" id="sidebar-right">
+
+    <!-- 顶部 header -->
+    <div class="chat-panel-head">
+      <div class="cph-icon">F</div>
+      <div class="cph-text">
+        <div class="cph-t">
+          <span class="ai-pulse-dot"></span>
+          飞象 AI
+        </div>
+        <div class="cph-s" id="chat-context-subtitle">需要时叫我</div>
+      </div>
+      <!-- v3.6：右栏头部不再承担「新对话 / 历史」管理职责
+           - 历史：去左栏「最近对话」查看（单一入口，避免左右重复）
+           - 新对话：在顶栏「+ 新对话」按钮触发（与「+ 上传」并列）
+           右栏专注当前 AI 对话本身，头部仅展示助手身份与状态 -->
+    </div>
+
+    <!-- 消息流 -->
+    <div class="chat-stream" id="chat-stream">
+
+      <!-- 顶部：被动提示，不主动推送任何内容（副标题已经说过「需要时叫我」，这里只留极简引导） -->
+      <div class="empty-hint">
+        <div class="empty-hint-icon"><i data-lucide="message-circle"></i></div>
+        <div class="empty-hint-d">在下方问我，关于文件的都行</div>
+      </div>
+
+      <div class="stream-day">你之前问过 · 本周</div>
+
+      <!-- 用户消息 -->
+      <div class="stream-msg user">
+        <div class="stream-msg-head">
+          <span class="smh-time">04-28 21:08</span>
+          <span class="smh-name">你</span>
+        </div>
+        <div class="stream-bubble">
+          帮我写一份二次函数图像的导入环节，参考我去年的课件
+        </div>
+      </div>
+
+      <!-- AI 回复（带嵌入产物卡片 — v3.4 统一为 rcv-artifact 标准卡片样式，跟历史回顾态完全一致） -->
+      <div class="stream-msg ai">
+        <div class="stream-msg-head">
+          <span class="ai-pulse-dot"></span>
+          <span class="smh-name">飞象 AI</span>
+          <span class="smh-time">04-28 21:08</span>
+        </div>
+        <div class="stream-bubble">
+          已参考 <b>《二次函数图像与性质·导入课件》</b>。你去年用的是「喷泉」情境，
+          下面这版改为「跳水比赛」，延续了「具体→抽象→再具体」的三段结构：
+          <div class="rcv-artifact" onclick="openArtifactInCenter('教案片段 · 导入环节','.docx','source')">
+            <div class="rcv-art-icon"><i data-lucide="file-text"></i></div>
+            <div class="rcv-art-body">
+              <div class="rcv-art-name">教案片段 · 导入环节<span class="rcv-art-ext">.docx</span></div>
+              <div class="rcv-art-desc">5-7 分钟导入 · 跳水比赛情境 + 3 道追问 + 图像到代数转换</div>
+              <div class="rcv-art-meta">
+                <span class="rcv-art-tag"><i data-lucide="clock-3"></i>约 380 字</span>
+                <span class="rcv-art-tag"><i data-lucide="book-open"></i>教案</span>
+              </div>
+            </div>
+            <div class="rcv-art-actions">
+              <button class="rcv-art-btn primary" onclick="event.stopPropagation();openArtifactInCenter('教案片段 · 导入环节','.docx','source')"><i data-lucide="eye"></i>预览</button>
+              <button class="rcv-art-btn ghost" onclick="event.stopPropagation();showToast('✓ 已保存到「我的知识库 › 数学 › 八下·二次函数」')"><i data-lucide="bookmark-plus"></i>保存到我的知识库</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部输入框（不放快捷指令：等真实使用数据再设计） -->
+    <div class="chat-composer">
+      <!-- 上下文标签：中栏打开素材时显示，紧贴输入框上方告诉老师 AI 当前的上下文范围 -->
+      <div class="composer-context" id="composer-context" style="display:none">
+        <i data-lucide="file-text"></i>
+        <span class="ctx-name" id="composer-context-name">二次函数图像与性质·导入课件.pptx</span>
+        <button class="ctx-x" onclick="clearChatContext()" title="不基于这份文件回答">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="chat-composer-input">
+        <textarea id="composer-text" placeholder="问点什么、或让飞象做点什么…" rows="1"></textarea>
+      </div>
+      <!-- 新对话欢迎态快捷 chip：仅 has-zen-welcome 侧栏时显示，帮老师快速选任务 -->
+      <div class="composer-hints" id="composer-hints">
+        <button class="ch-chip" onclick="useQuickPrompt('想出什么样的题？比如：高一议论文 10 道选择 + 2 道作文，难度中等')">
+          <i data-lucide="sparkles"></i>AI 组题
+        </button>
+        <button class="ch-chip" onclick="useQuickPrompt('要做哪个知识点的动画？比如：勾股定理推导，2 分钟，配旁白')">
+          <i data-lucide="play"></i>教学动画
+        </button>
+        <button class="ch-chip" onclick="useQuickPrompt('为哪节课做课件？比如：《二次函数图像与性质》第二课时，重点讲对称轴')">
+          <i data-lucide="layout"></i>多页课件
+        </button>
+        <button class="ch-chip ch-chip-more" onclick="enterChatOnlyMode()" title="更多工具">
+          <i data-lucide="more-horizontal"></i>
+        </button>
+      </div>
+      <div class="chat-composer-foot">
+        <button class="composer-pill" title="附件"><i data-lucide="paperclip"></i>附件</button>
+        <!-- @引用：体现"知识库 vs 外部 sources" 的产品架构哲学
+             当前仅「我的知识库」可用；更多数据源后续开放
+             这个 UI 在 v1 就传达"知识库可独立 + 多产品打通是加分"的概念 -->
+        <div class="composer-cite-wrap">
+          <button class="composer-pill" title="@引用 sources" onclick="toggleCiteMenu(event)">
+            <i data-lucide="at-sign"></i>引用
+          </button>
+          <div class="cite-menu" id="cite-menu" style="display:none">
+            <div class="cite-menu-head">引用 AI 回答的依据</div>
+            <div class="cite-item active" onclick="selectCiteSource('mykb')">
+              <i data-lucide="folder" class="cite-i"></i>
+              <div class="cite-text">
+                <div class="cite-t">我的知识库</div>
+                <div class="cite-s">默认 · 你上传的全部资料</div>
+              </div>
+              <i data-lucide="check" class="cite-chk"></i>
+            </div>
+            <div class="cite-item disabled" title="后续开放">
+              <i data-lucide="bar-chart-3" class="cite-i"></i>
+              <div class="cite-text">
+                <div class="cite-t">更多数据源</div>
+                <div class="cite-s">后续可引用作业、作文等外部资料</div>
+              </div>
+              <span class="cite-lock">即将开放</span>
+            </div>
+            <div class="cite-item disabled" title="需购买飞象作文产品">
+              <i data-lucide="file-text" class="cite-i"></i>
+              <div class="cite-text">
+                <div class="cite-t">学生作文</div>
+                <div class="cite-s">需购买 飞象作文 · 作文及批改记录</div>
+              </div>
+              <span class="cite-lock">解锁</span>
+            </div>
+            <div class="cite-foot">
+              <i data-lucide="info" class="cite-foot-i"></i>
+              数据只是临时引用，不会进入你的知识库
+            </div>
+          </div>
+        </div>
+        <button class="composer-send" onclick="sendChatMessage()" title="发送（Enter）">
+          <i data-lucide="arrow-up"></i>
+        </button>
+      </div>
+    </div>
+
+  </aside>
+
+</main>
+
+  <!-- ============ 通知中心 popover（v3.5）============
+       异步任务收件箱：AI 切题 / 入库 / 归类 等所有"AI 完成事情"的反馈都收到这里
+       设计：① AI 不主动弹气泡打扰老师 ② 老师传完文件可立即去做别的事
+            ③ 处理完了红点提示，老师自己点开看 -->
+<aside class="notif-panel" id="notif-panel">
+  <div class="notif-head">
+    <span class="notif-head-t">通知<span class="notif-count" id="notif-count">3 条</span></span>
+    <span class="notif-head-clear" onclick="clearAllNotifs()">全部已读</span>
+  </div>
+  <div class="notif-list" id="notif-list">
+
+    <!-- 处理中：AI 正在切题（带进度条） — v3.5 二轮强化"题来自文件"派生关系 -->
+    <div class="notif-item" id="notif-item-cutting">
+      <div class="notif-icon processing"><i data-lucide="loader-2"></i></div>
+      <div class="notif-body">
+        <div class="notif-title">AI 正在从你的文件抽题</div>
+        <div class="notif-desc">来自 <b>《九年级月考卷.pdf》</b> · 估计 12 道题，会归到「我的题目」</div>
+        <div class="notif-progress"><div class="notif-progress-bar" id="notif-bar-cutting" style="width:67%"></div></div>
+        <div class="notif-meta">
+          <span>67% · 约 12 秒</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已完成 · 待审核：AI 切题完成，等老师入「我的题目」 -->
+    <div class="notif-item" onclick="openQbankReview()">
+      <div class="notif-icon review"><i data-lucide="file-check-2"></i></div>
+      <div class="notif-body">
+        <div class="notif-title">AI 已从《二次函数 · 单元练习.pdf》抽出 <b>12 道题</b></div>
+        <div class="notif-desc">已归到「我的题目」 → 等你审核确认</div>
+        <div class="notif-meta">
+          <span>2 分钟前</span>
+          <span>·</span>
+          <span class="notif-action">审核入库 →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已完成 · 入库 -->
+    <div class="notif-item" onclick="closeNotifPanel();showToast('✓ 已打开《二次函数 · 导入课件.pptx》')">
+      <div class="notif-icon done"><i data-lucide="check-circle-2"></i></div>
+      <div class="notif-body">
+        <div class="notif-title">已加入知识库 <b>5 份文件</b></div>
+        <div class="notif-desc">放在「数学 › 八下·二次函数」</div>
+        <div class="notif-meta">
+          <span>10 分钟前</span>
+          <span>·</span>
+          <span class="notif-action">查看 →</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</aside>
+<div class="notif-overlay" id="notif-overlay" onclick="closeNotifPanel()" style="display:none;position:fixed;inset:0;z-index:79;background:transparent"></div>
+
+<!-- ============ 添加抽屉 ============ -->
+<div class="import-overlay" id="import-overlay" onclick="closeImportDrawer()"></div>
+<aside class="import-drawer" id="import-drawer">
+
+  <div class="drawer-head">
+    <div class="drawer-head-text">
+      <div class="drawer-head-t">把素材加到知识库</div>
+      <div class="drawer-head-s">少量文件直接拖入；批量整理用文件夹/压缩包</div>
+    </div>
+    <button class="drawer-close" onclick="closeImportDrawer()" title="关闭">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+
+  <div class="drawer-body">
+
+    <!-- 拖拽区 -->
+    <div class="drop-zone" onclick="mockSelectFiles()">
+      <div class="drop-zone-icon"><i data-lucide="upload-cloud"></i></div>
+      <div class="drop-zone-t">把文件拖到这里</div>
+      <div class="drop-zone-s">
+        支持 .pptx · .docx · .pdf · .jpg · .png · .xlsx · .txt
+      </div>
+      <div class="drop-actions">
+        <button class="drop-btn" onclick="event.stopPropagation();mockSelectFiles()">
+          <i data-lucide="file-plus"></i>
+          浏览文件
+        </button>
+        <button class="drop-btn" onclick="event.stopPropagation();pasteHint()">
+          <i data-lucide="clipboard"></i>
+          从剪贴板粘贴
+        </button>
+      </div>
+    </div>
+
+    <!-- 批量入口 -->
+    <div class="bulk-card" onclick="closeImportDrawer();setTimeout(()=>setState('onboarding-scan'),250)">
+      <div class="bulk-icon"><i data-lucide="folder-up"></i></div>
+      <div class="bulk-text">
+        <div class="bulk-t">批量整理：上传文件夹 / 压缩包</div>
+        <div class="bulk-s">保留你的原结构，一次到位 · 走完整导入流程</div>
+      </div>
+      <div class="bulk-arr"><i data-lucide="arrow-right"></i></div>
+    </div>
+
+    <!-- 已选文件区（mock 默认显示） -->
+    <div class="selected-section" id="selected-section">
+      <div class="selected-head">
+        已选 3 个文件
+        <span class="ai-tag">AI 已建议归类，你可以改</span>
+      </div>
+
+      <div class="file-row">
+        <div class="fr-icon ppt">PPT</div>
+        <div class="fr-body">
+          <div class="fr-name">函数复习课·新版.pptx</div>
+          <div class="fr-meta">2.1 MB · 刚刚</div>
+          <div class="fr-folder">
+            <span class="ai-mini-dot"></span>
+            <span>放到</span>
+            <span class="folder-pill">
+              <i data-lucide="folder"></i>
+              数学 › 八下·二次函数
+              <span class="arr">▾</span>
+            </span>
+          </div>
+        </div>
+        <button class="fr-remove" title="移除"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="file-row">
+        <div class="fr-icon pdf">PDF</div>
+        <div class="fr-body">
+          <div class="fr-name">2025 各地中考真题汇编.pdf</div>
+          <div class="fr-meta">8.4 MB · 刚刚</div>
+          <div class="fr-folder">
+            <span class="ai-mini-dot"></span>
+            <span>放到</span>
+            <span class="folder-pill">
+              <i data-lucide="folder"></i>
+              数学 › 月考与中考
+              <span class="arr">▾</span>
+            </span>
+          </div>
+        </div>
+        <button class="fr-remove" title="移除"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="file-row">
+        <div class="fr-icon img">IMG</div>
+        <div class="fr-body">
+          <div class="fr-name">学生作业·扫描.jpg</div>
+          <div class="fr-meta">1.6 MB · 刚刚 · AI 识别中…</div>
+          <div class="fr-folder">
+            <span class="ai-mini-dot"></span>
+            <span>放到</span>
+            <span class="folder-pill">
+              <i data-lucide="folder"></i>
+              数学 › 临时·待整理
+              <span class="arr">▾</span>
+            </span>
+          </div>
+        </div>
+        <button class="fr-remove" title="移除"><i data-lucide="x"></i></button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="drawer-foot">
+    <div class="foot-meta"><b>3 个文件</b> · 共 12.1 MB</div>
+    <div class="foot-actions">
+      <button class="foot-btn ghost" onclick="closeImportDrawer()">取消</button>
+      <button class="foot-btn dark" onclick="confirmImport()">
+        全部归位
+        <i data-lucide="arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ===== 题目篮 · 侧滑面板 ===== -->
+<div class="qbasket-overlay" id="qbasket-overlay" onclick="closeQbasketPanel()"></div>
+<div class="qbasket-panel" id="qbasket-panel">
+  <div class="qbasket-head">
+    <div class="qbasket-title">
+      <i data-lucide="shopping-basket"></i>
+      题目篮
+      <span class="qbasket-cnt" id="qbasket-cnt">0</span>
+    </div>
+    <button class="qbasket-close" onclick="closeQbasketPanel()"><i data-lucide="x"></i></button>
+  </div>
+  <div class="qbasket-list" id="qbasket-list">
+    <!-- 已选题目动态渲染 -->
+    <div class="qbasket-empty" id="qbasket-empty">
+      <i data-lucide="shopping-basket"></i>
+      <div>题目篮是空的</div>
+      <div style="font-size:11.5px;color:#A8A39B">在左侧题目卡片上点「+ 添加」</div>
+    </div>
+  </div>
+  <div class="qbasket-foot" id="qbasket-foot" style="display:none">
+    <button class="qbasket-foot-clear" onclick="clearQbasket()">清空</button>
+    <button class="qbasket-foot-go" onclick="showToast('（演示）跳转到飞象作业星 · 组题')">
+      <i data-lucide="file-stack"></i>去组题
+    </button>
+  </div>
+</div>
+
+<!-- ===== AI 录入题库 · 侧滑面板 ===== -->
+<div class="qbank-overlay" id="qbank-overlay" onclick="closeQBankPanel()"></div>
+<div class="qbank-panel" id="qbank-panel">
+  <div class="qbp-head">
+    <div class="qbp-title"><i data-lucide="sparkles"></i>AI 识别到的题目</div>
+    <button class="qbp-close" onclick="closeQBankPanel()"><i data-lucide="x"></i></button>
+  </div>
+  <div class="qbp-sub">来自「二次函数图像与性质·导入课件.pptx」· 共识别到 <b>6 题</b></div>
+
+  <div class="qbp-list" id="qbp-list">
+
+    <div class="qbp-item" data-idx="0">
+      <label class="qbp-check"><input type="checkbox" checked><span class="qbp-checkmark"></span></label>
+      <div class="qbp-body">
+        <div class="qbp-q">已知抛物线 y = ax² + bx + c 过点 (1, 0)、(3, 0)，顶点纵坐标为 −1，求 a、b、c 的值。</div>
+        <div class="qbp-meta"><span class="qbp-tag">解答题</span><span class="qbp-tag">二次函数</span><span class="qbp-tag">待定系数法</span></div>
+      </div>
+    </div>
+
+    <div class="qbp-item" data-idx="1">
+      <label class="qbp-check"><input type="checkbox" checked><span class="qbp-checkmark"></span></label>
+      <div class="qbp-body">
+        <div class="qbp-q">如图，二次函数 y = x² − 2x − 3 的图像与 x 轴的交点坐标是（　　）<br><span class="qbp-opt">A. (−1, 0)(3, 0)　B. (1, 0)(−3, 0)　C. (−1, 0)(−3, 0)　D. (1, 0)(3, 0)</span></div>
+        <div class="qbp-meta"><span class="qbp-tag">选择题</span><span class="qbp-tag">图像交点</span></div>
+      </div>
+    </div>
+
+    <div class="qbp-item" data-idx="2">
+      <label class="qbp-check"><input type="checkbox" checked><span class="qbp-checkmark"></span></label>
+      <div class="qbp-body">
+        <div class="qbp-q">当 a ＜ 0 时，抛物线 y = ax² 的开口方向是（　　）<br><span class="qbp-opt">A. 向上　B. 向下　C. 向左　D. 不确定</span></div>
+        <div class="qbp-meta"><span class="qbp-tag">选择题</span><span class="qbp-tag">开口方向</span></div>
+      </div>
+    </div>
+
+    <div class="qbp-item" data-idx="3">
+      <label class="qbp-check"><input type="checkbox"><span class="qbp-checkmark"></span></label>
+      <div class="qbp-body">
+        <div class="qbp-q">一球从高台抛出，忽略空气阻力，其运动轨迹满足 h = −5t² + 20t + 3（h 单位：米，t 单位：秒），求球达到最高点的时间及高度。</div>
+        <div class="qbp-meta"><span class="qbp-tag">应用题</span><span class="qbp-tag">顶点坐标</span><span class="qbp-tag">实际情境</span></div>
+      </div>
+    </div>
+
+    <div class="qbp-item" data-idx="4">
+      <label class="qbp-check"><input type="checkbox"><span class="qbp-checkmark"></span></label>
+      <div class="qbp-body">
+        <div class="qbp-q">填空：抛物线 y = 2(x − 1)² + 3 的顶点坐标是____，对称轴方程是____。</div>
+        <div class="qbp-meta"><span class="qbp-tag">填空题</span><span class="qbp-tag">顶点式</span></div>
+      </div>
+    </div>
+
+    <div class="qbp-item" data-idx="5">
+      <label class="qbp-check"><input type="checkbox"><span class="qbp-checkmark"></span></label>
+      <div class="qbp-body">
+        <div class="qbp-q">判断：若 a ＞ 0，b ＞ 0，c ＜ 0，则抛物线 y = ax² + bx + c 必过第一、二、四象限。（　　）</div>
+        <div class="qbp-meta"><span class="qbp-tag">判断题</span><span class="qbp-tag">系数符号</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="qbp-footer">
+    <div class="qbp-sel-info"><span id="qbp-sel-count">3</span> 题已选</div>
+    <button class="qbp-btn ghost" onclick="closeQBankPanel()">取消</button>
+    <button class="qbp-btn primary" onclick="confirmAddToQBank()">
+      <i data-lucide="check"></i>加入「我的题目」
+    </button>
+  </div>
+</div>
+
+<style>
+/* ===== AI 录入题库侧滑面板 ===== */
+.qbank-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:900;
+  backdrop-filter:blur(1px);
+}
+.qbank-overlay.show{display:block}
+.qbank-panel{
+  position:fixed;top:0;right:0;bottom:0;width:480px;max-width:90vw;
+  background:#FAFAF8;border-left:1px solid #E8E4DC;
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  z-index:901;box-shadow:-4px 0 24px rgba(0,0,0,.08);
+}
+.qbank-panel.show{transform:translateX(0)}
+.qbp-head{
+  display:flex;align-items:center;gap:8px;
+  padding:18px 20px 12px;border-bottom:1px solid #ECE9E2;
+}
+.qbp-title{
+  flex:1;font-size:15px;font-weight:600;color:#1A1A1A;
+  display:flex;align-items:center;gap:7px;
+}
+.qbp-title [data-lucide]{width:15px;height:15px;color:#A87E2C}
+.qbp-close{
+  width:28px;height:28px;border:none;background:none;cursor:pointer;
+  display:grid;place-items:center;border-radius:6px;color:#9A968F;
+}
+.qbp-close:hover{background:#ECE9E2;color:#1A1A1A}
+.qbp-close [data-lucide]{width:15px;height:15px}
+.qbp-sub{
+  padding:10px 20px;font-size:12px;color:#7A766F;border-bottom:1px solid #ECE9E2;
+  background:#F7F6F3;
+}
+.qbp-sub b{color:#3A3A3A;font-weight:600}
+.qbp-list{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:8px}
+.qbp-item{
+  display:flex;gap:10px;align-items:flex-start;
+  background:#FFFFFF;border:1px solid #ECE9E2;border-radius:9px;
+  padding:12px 14px;cursor:default;transition:border-color .12s,box-shadow .12s;
+}
+.qbp-item:hover{border-color:#D4C9A8;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.qbp-item:has(input:checked){border-color:#C9A76E;background:#FDFCF8}
+.qbp-check{flex-shrink:0;margin-top:2px;cursor:pointer;position:relative}
+.qbp-check input{position:absolute;opacity:0;width:0;height:0}
+.qbp-checkmark{
+  display:block;width:16px;height:16px;border:1.5px solid #C8C4BC;
+  border-radius:4px;background:#FFFFFF;transition:all .12s;
+}
+.qbp-check input:checked ~ .qbp-checkmark{
+  background:#A87E2C;border-color:#A87E2C;
+  background-image:url("data:image/svg+xml,%3Csvg width='10' height='8' viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3.5L4 6.5L9 1' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:center;
+}
+.qbp-body{flex:1;min-width:0}
+.qbp-q{font-size:13px;color:#1A1A1A;line-height:1.65;margin-bottom:7px}
+.qbp-opt{display:block;font-size:12px;color:#5A5550;margin-top:4px;line-height:1.7}
+.qbp-meta{display:flex;flex-wrap:wrap;gap:5px}
+.qbp-tag{
+  font-size:11px;color:#7A5615;background:#FBF7EE;
+  border:1px solid #F0E8D2;border-radius:4px;padding:1px 7px;
+}
+.qbp-footer{
+  padding:14px 20px;border-top:1px solid #ECE9E2;
+  display:flex;align-items:center;gap:10px;background:#FAFAF8;
+}
+.qbp-sel-info{flex:1;font-size:12.5px;color:#7A766F}
+.qbp-sel-info span{font-weight:600;color:#A87E2C}
+.qbp-btn{
+  height:34px;padding:0 16px;border-radius:7px;font-size:13px;font-weight:500;
+  border:none;cursor:pointer;display:flex;align-items:center;gap:5px;
+  transition:background .12s,box-shadow .12s;
+}
+.qbp-btn.ghost{background:transparent;border:1px solid #D4CFC8;color:#5A5550}
+.qbp-btn.ghost:hover{background:#ECE9E2}
+.qbp-btn.primary{background:#1A1A1A;color:#FAFAF8}
+.qbp-btn.primary:hover{background:#333;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.qbp-btn [data-lucide]{width:13px;height:13px}
+/* src-btn accent 样式 */
+.src-btn.accent{
+  background:linear-gradient(135deg,#C9A76E 0%,#A87E2C 100%);
+  color:#FFFFFF;border:none;font-weight:500;
+}
+.src-btn.accent:hover{box-shadow:0 2px 8px rgba(168,126,44,.35)}
+.src-btn.accent [data-lucide]{color:#FFFFFF}
+</style>
+
+<!-- toast -->
+<div class="toast" id="toast">
+  <i data-lucide="check-circle"></i>
+  <span id="toast-text">已归位 3 个文件</span>
+</div>
+
+<!-- ============ 右键菜单（contextmenu） ============ -->
+<div class="ctx-menu" id="ctx-menu" style="display:none">
+  <div class="ctx-header" id="ctx-header">当前项</div>
+
+  <!-- 文件夹菜单
+       v3.5 入口收敛：删除「导入文件到这里」— 老师只走顶栏「+ 添加」一个入口
+       理由：5 个上传入口 → 1 个，减少认知碎片；右键场景的"就近上传"价值不大（上传完拖拽也方便） -->
+  <div class="ctx-menu-list" data-menu="folder">
+    <div class="ctx-item" onclick="ctxAction('newFolder')">
+      <i data-lucide="folder-plus"></i>新建子文件夹
+    </div>
+    <div class="ctx-item" onclick="ctxAction('newNote')">
+      <i data-lucide="file-plus"></i>新建笔记
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="ctxAction('rename')">
+      <i data-lucide="pencil"></i>重命名 <span class="ctx-kbd">F2</span>
+    </div>
+    <div class="ctx-item" onclick="ctxAction('copyPath')">
+      <i data-lucide="link"></i>复制路径
+    </div>
+    <div class="ctx-item" onclick="ctxAction('graph')">
+      <i data-lucide="git-branch"></i>在图谱中查看
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item danger" onclick="ctxAction('delete')">
+      <i data-lucide="trash-2"></i>删除文件夹
+    </div>
+  </div>
+
+  <!-- 文件菜单 -->
+  <div class="ctx-menu-list" data-menu="file">
+    <div class="ctx-item" onclick="ctxAction('open')">
+      <i data-lucide="file-text"></i>打开预览 <span class="ctx-kbd">↵</span>
+    </div>
+    <div class="ctx-item" onclick="ctxAction('askAi')">
+      <i data-lucide="sparkles"></i>问 AI 关于此文件
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="ctxAction('rename')">
+      <i data-lucide="pencil"></i>重命名 <span class="ctx-kbd">F2</span>
+    </div>
+    <div class="ctx-item" onclick="ctxAction('move')">
+      <i data-lucide="folder-input"></i>移动到…
+    </div>
+    <div class="ctx-item" onclick="ctxAction('copyPath')">
+      <i data-lucide="link"></i>复制路径
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item danger" onclick="ctxAction('delete')">
+      <i data-lucide="trash-2"></i>删除
+    </div>
+  </div>
+
+  <!-- 空白菜单
+       v3.5 入口收敛：删除「批量导入」— 同上，统一走顶栏入口 -->
+  <div class="ctx-menu-list" data-menu="blank">
+    <div class="ctx-item" onclick="ctxAction('newFolder')">
+      <i data-lucide="folder-plus"></i>新建文件夹
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="ctxAction('collapseAll')">
+      <i data-lucide="chevrons-down-up"></i>折叠所有
+    </div>
+    <div class="ctx-item" onclick="ctxAction('refresh')">
+      <i data-lucide="refresh-cw"></i>刷新
+    </div>
+  </div>
+</div>
+
+<!-- ============ Spotlight 文件搜索浮层（⌘K 唤出）============
+     职责：仅按文件名 / 路径精确搜索。语义查找走右栏 AI 对话。
+     设计原则：克制、按需呼出、不占视觉空间 -->
+<div class="spotlight" id="spotlight" style="display:none">
+  <div class="spotlight-overlay" onclick="closeSpotlight()"></div>
+  <div class="spotlight-card" role="dialog" aria-label="搜索文件">
+    <div class="spot-input-wrap">
+      <i data-lucide="search"></i>
+      <input id="spotlight-input" type="text" placeholder="按文件名或路径搜索…" autocomplete="off" />
+      <span class="spot-esc" onclick="closeSpotlight()">Esc</span>
+    </div>
+    <div class="spotlight-results" id="spotlight-results"></div>
+    <div class="spot-foot">
+      <span class="spot-hint"><kbd>↵</kbd> 打开</span>
+      <span class="spot-hint"><kbd>Esc</kbd> 关闭</span>
+      <span class="spot-tip">想做语义查找？右栏问飞象 AI →</span>
+    </div>
+  </div>
+</div>
+<script src="kb-workbench.js?v=202605072008"></script>
+<script src="kb-page-router.js?v=202605072008"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get('source');
+    if(name && typeof openSource === 'function') openSource(name);
+    else setState('source');
+  }, 80);
+});
+</script>
+</body>
+</html>
