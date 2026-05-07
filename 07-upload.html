@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>上传文件 · 飞象 AI · 知识库</title>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Source Han Sans SC","Helvetica Neue",sans-serif;
+    background:#F7F6F3;color:#1A1A1A;font-size:14px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;height:100vh;overflow:hidden;
+  }
+  button{font-family:inherit;border:none;background:none;cursor:pointer;color:inherit}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#DDD8CF;border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  [data-lucide]{stroke-width:1.75}
+
+  /* 顶栏（参考主 demo .topbar） */
+  .topbar{
+    height:52px;display:flex;align-items:center;gap:12px;
+    padding:0 18px;border-bottom:1px solid #ECE9E2;
+    background:rgba(247,246,243,.92);backdrop-filter:blur(14px);
+    flex-shrink:0;
+  }
+  .brand{
+    display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px;color:#1A1A1A;
+    padding-right:14px;border-right:1px solid #ECE9E2;height:28px;
+  }
+  .brand-mark{
+    width:22px;height:22px;border-radius:6px;
+    background:linear-gradient(135deg,#1A1A1A 0%,#3A3A3A 100%);
+    display:grid;place-items:center;color:#FBF7EE;font-size:11px;font-weight:700;
+  }
+  .brand-sub{color:#9A968F;font-weight:500;font-size:13px}
+  .page-title{
+    font-size:14px;color:#5A5550;display:flex;align-items:center;gap:8px;
+  }
+  .page-title [data-lucide]{width:14px;height:14px;color:#9A968F}
+  .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .top-btn{
+    height:30px;padding:0 12px;border-radius:7px;font-size:12.5px;color:#3A3A3A;
+    display:inline-flex;align-items:center;gap:5px;
+    background:transparent;border:1px solid #E5E1DA;transition:all .12s;cursor:pointer;
+  }
+  .top-btn:hover{background:#F0EDE7;border-color:#D9D3C7}
+  .top-btn [data-lucide]{width:13px;height:13px;color:#5A5550}
+  .top-btn.dark{background:#1A1A1A;color:#FBF7EE;border-color:#1A1A1A}
+  .top-btn.dark:hover{background:#3A3A3A;border-color:#3A3A3A}
+  .top-btn.dark [data-lucide]{color:#FBF7EE}
+
+  /* 主区域 */
+  main{
+    flex:1;overflow-y:auto;padding:32px 48px 28px;
+  }
+  .wrap{
+    max-width:660px;margin:6vh auto 0;display:flex;flex-direction:column;gap:22px;
+  }
+  .head{
+    text-align:left;
+  }
+  .head h1{
+    font-size:32px;font-weight:650;color:#1F1C18;
+    letter-spacing:-0.7px;line-height:1.15;margin:0 0 18px;
+  }
+  .head p{
+    font-size:15px;color:#5F5A54;line-height:1.82;
+    margin:0 0 10px;font-weight:400;max-width:620px;
+  }
+
+  /* 拖拽区 */
+  .drop-zone{
+    position:relative;
+    padding:30px 32px;
+    border:1px solid #E4DFD6;border-radius:16px;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBFAF7 100%);
+    cursor:pointer;
+    transition:all .18s ease;
+    text-align:left;
+    display:flex;align-items:center;gap:18px;
+    box-shadow:0 10px 32px rgba(40,32,16,.06), 0 1px 2px rgba(40,32,16,.04);
+  }
+  .drop-zone:hover,.drop-zone.dragover{
+    border-color:#C9A76E;background:linear-gradient(180deg,#FFFFFF 0%,#FBF7EE 100%);
+    box-shadow:0 14px 38px rgba(40,32,16,.09), 0 2px 6px rgba(40,32,16,.05);
+    transform:translateY(-1px);
+  }
+  .drop-zone-content{display:flex;align-items:center;gap:18px;width:100%}
+  .drop-zone-icon{
+    width:48px;height:48px;border-radius:50%;
+    background:#F1ECE0;color:#A87E2C;
+    display:grid;place-items:center;margin:0;
+    transition:background .18s, transform .18s;
+    flex-shrink:0;
+  }
+  .drop-zone:hover .drop-zone-icon{background:#E9DCC2;transform:translateY(-2px)}
+  .drop-zone-icon [data-lucide]{width:22px;height:22px;stroke-width:1.75}
+  .drop-zone.dragover .drop-zone-icon{background:#FBF7EE}
+  .drop-zone-t{
+    font-size:15px;font-weight:650;color:#1F1C18;
+    margin-bottom:4px;letter-spacing:.1px;
+  }
+  .drop-zone-s{
+    font-size:13px;color:#7A766F;margin-bottom:0;
+  }
+  .drop-zone-main{flex:1;min-width:0}
+  .drop-zone-action{
+    flex-shrink:0;height:36px;padding:0 16px;border-radius:8px;
+    background:#1F1C18;color:#FAFAF8;font-size:13px;font-weight:600;
+    display:inline-flex;align-items:center;gap:6px;
+    box-shadow:0 4px 14px rgba(31,28,24,.14);
+  }
+  .drop-zone-action [data-lucide]{width:14px;height:14px;color:#FAFAF8}
+
+  /* 已选文件列表 */
+  .files-section{
+    background:#FFFFFF;border:1px solid #ECE9E2;border-radius:12px;
+    overflow:hidden;display:none;
+  }
+  .files-section.show{display:block}
+  .files-head{
+    padding:13px 16px;border-bottom:1px solid #ECE9E2;
+    display:flex;align-items:center;
+  }
+  .files-head-t{
+    font-size:13px;font-weight:600;color:#1A1A1A;
+  }
+  .files-head-meta{
+    margin-left:auto;font-size:11.5px;color:#7A766F;
+  }
+  .files-list{padding:6px}
+  .file-row{
+    display:flex;gap:12px;padding:11px 12px;border-radius:8px;
+    align-items:center;transition:background .12s;
+  }
+  .file-row:hover{background:#FAF8F3}
+  .fr-icon{
+    width:34px;height:34px;border-radius:7px;flex-shrink:0;
+    display:grid;place-items:center;font-size:10px;font-weight:700;letter-spacing:-.02em;
+  }
+  .fr-icon.pdf{background:#FBF1EE;color:#A85E48}
+  .fr-icon.doc{background:#EAF1FB;color:#456B9E}
+  .fr-icon.ppt{background:#FCEEEA;color:#B8624A}
+  .fr-icon.img{background:#EDF5EC;color:#5A8A5C}
+  .fr-body{flex:1;min-width:0}
+  .fr-name{
+    font-size:13px;color:#1A1A1A;font-weight:500;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4;
+  }
+  .fr-meta{
+    font-size:11.5px;color:#9A968F;margin-top:2px;
+  }
+  .fr-folder{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;color:#A87E2C;margin-top:5px;
+    padding:3px 8px;border-radius:5px;background:#FBF7EE;border:1px solid #F0E8D2;
+  }
+  .fr-folder [data-lucide]{width:11px;height:11px}
+  .fr-folder b{color:#5A4F38;font-weight:600}
+  .fr-folder.unsorted{
+    color:#7A766F;background:#F4F2EE;border-color:#E5E1DA;
+  }
+  .fr-folder.unsorted b{color:#3A3A3A}
+  .fr-remove{
+    width:26px;height:26px;border-radius:5px;color:#9A968F;cursor:pointer;
+    display:grid;place-items:center;flex-shrink:0;
+  }
+  .fr-remove:hover{background:#F0EDE7;color:#A85E48}
+  .fr-remove [data-lucide]{width:13px;height:13px}
+
+  /* 批量入口（文件夹 / 压缩包） */
+  .bulk-card{
+    background:#FFFFFF;border:1px solid #ECE9E2;border-radius:10px;
+    padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;
+    transition:all .12s;
+  }
+  .bulk-card:hover{border-color:#D9D3C7;background:#FAF8F3}
+  .bulk-icon{
+    width:34px;height:34px;border-radius:7px;flex-shrink:0;
+    background:#FBF7EE;color:#A87E2C;display:grid;place-items:center;
+  }
+  .bulk-icon [data-lucide]{width:16px;height:16px}
+  .bulk-body{flex:1;min-width:0}
+  .bulk-t{
+    font-size:13px;font-weight:600;color:#1A1A1A;line-height:1.4;
+  }
+  .bulk-s{font-size:11.5px;color:#7A766F;margin-top:2px}
+  .bulk-arr{color:#A8A39B}
+  .bulk-arr [data-lucide]{width:14px;height:14px}
+
+  /* 隐私承诺 */
+  .promise{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:11.5px;color:#7A766F;padding-top:4px;
+  }
+  .promise [data-lucide]{width:12px;height:12px;color:#A87E2C}
+
+  /* 底栏 */
+  footer{
+    flex-shrink:0;padding:14px 28px;border-top:1px solid #ECE9E2;
+    background:#FBF9F5;display:flex;align-items:center;
+  }
+  .foot-meta{
+    font-size:12.5px;color:#5A5550;
+  }
+  .foot-meta b{color:#1A1A1A;font-variant-numeric:tabular-nums}
+  .foot-actions{margin-left:auto;display:flex;gap:8px}
+
+  /* 提交动画态 */
+  .submitting .drop-zone,.submitting .files-section,.submitting .bulk-card{
+    opacity:.55;pointer-events:none;
+  }
+  .submit-overlay{
+    position:fixed;inset:0;z-index:90;
+    background:rgba(247,246,243,.85);backdrop-filter:blur(6px);
+    display:none;align-items:center;justify-content:center;
+  }
+  .submit-overlay.show{display:flex}
+  .submit-card{
+    width:340px;background:#FFFFFF;border:1px solid #ECE9E2;border-radius:14px;
+    padding:28px 24px;text-align:center;
+    box-shadow:0 12px 40px rgba(0,0,0,.10);
+  }
+  .submit-icon{
+    width:48px;height:48px;border-radius:50%;
+    background:#FBF7EE;color:#A87E2C;
+    display:grid;place-items:center;margin:0 auto 14px;
+    animation:spin 1.6s linear infinite;
+  }
+  .submit-icon [data-lucide]{width:22px;height:22px}
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  .submit-t{
+    font-size:14px;font-weight:600;color:#1A1A1A;letter-spacing:-.005em;
+    margin-bottom:6px;
+  }
+  .submit-d{font-size:12px;color:#7A766F;line-height:1.6}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">FX</span>
+    飞象 AI<span class="brand-sub">· 知识库</span>
+  </div>
+  <div class="page-title">
+    <i data-lucide="upload-cloud"></i>
+    上传文件
+  </div>
+  <div class="topbar-actions">
+    <button class="top-btn" onclick="closeWindow()" title="返回工作台（不保存）">
+      <i data-lucide="x"></i>关闭
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <div class="head">
+      <h1>张老师，欢迎</h1>
+      <p>
+        你的课件、教案、真题、错题，不该只躺在文件夹里。<br>
+        放进飞象后，原文件不会被改动；AI 会帮你读懂、关联、记住。<br>
+        以后备课、找资料、出题组卷，都不必从零开始。<br>
+        资料越多，飞象越像一位熟悉你教学风格的老同事。
+      </p>
+    </div>
+
+    <!-- 拖拽区 -->
+    <div class="drop-zone" id="drop-zone"
+         ondragenter="dz('over',event)"
+         ondragover="event.preventDefault()"
+         ondragleave="dz('out',event)"
+         ondrop="dz('drop',event)"
+         onclick="mockSelectFiles()">
+      <div class="drop-zone-content">
+        <div class="drop-zone-icon"><i data-lucide="upload-cloud"></i></div>
+        <div class="drop-zone-main">
+          <div class="drop-zone-t">上传我的资料</div>
+          <div class="drop-zone-s">拖拽 PPT / Word / PDF / 图片 / 试卷到这里</div>
+        </div>
+        <div class="drop-zone-action">
+          <span>点击选择</span>
+          <i data-lucide="arrow-right"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已选文件列表（demo：先空，点"浏览文件"后展开 mock 数据） -->
+    <div class="files-section" id="files-section">
+      <div class="files-head">
+        <span class="files-head-t">即将上传</span>
+        <span class="files-head-meta" id="files-head-meta">3 个文件 · 共 12.1 MB</span>
+      </div>
+      <div class="files-list">
+
+        <div class="file-row">
+          <div class="fr-icon ppt">PPT</div>
+          <div class="fr-body">
+            <div class="fr-name">二次函数图像与性质 · 导入课件.pptx</div>
+            <div class="fr-meta">2.1 MB · 刚刚</div>
+            <span class="fr-folder unsorted">
+              <i data-lucide="inbox"></i>
+              放到 <b>未分类</b>（你可在知识库手动拖）
+            </span>
+          </div>
+          <button class="fr-remove" title="移除"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="file-row">
+          <div class="fr-icon pdf">PDF</div>
+          <div class="fr-body">
+            <div class="fr-name">九年级月考卷.pdf</div>
+            <div class="fr-meta">8.4 MB · 刚刚 · AI 检测到含题目</div>
+            <span class="fr-folder unsorted">
+              <i data-lucide="inbox"></i>
+              放到 <b>未分类</b>，AI 会抽题归到「我的题目」（需你审核）
+            </span>
+          </div>
+          <button class="fr-remove" title="移除"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="file-row">
+          <div class="fr-icon img">IMG</div>
+          <div class="fr-body">
+            <div class="fr-name">学生作业·扫描.jpg</div>
+            <div class="fr-meta">1.6 MB · 刚刚</div>
+            <span class="fr-folder unsorted">
+              <i data-lucide="inbox"></i>
+              放到 <b>未分类</b>
+            </span>
+          </div>
+          <button class="fr-remove" title="移除"><i data-lucide="x"></i></button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="foot-meta" id="foot-meta">还没选文件</div>
+  <div class="foot-actions">
+    <button class="top-btn" onclick="closeWindow()">取消</button>
+    <button class="top-btn dark" id="submit-btn" onclick="submitUpload()" disabled style="opacity:.5;cursor:not-allowed">
+      开始上传<i data-lucide="arrow-right"></i>
+    </button>
+  </div>
+</footer>
+
+<!-- 提交进度蒙版 -->
+<div class="submit-overlay" id="submit-overlay">
+  <div class="submit-card">
+    <div class="submit-icon"><i data-lucide="loader-2"></i></div>
+    <div class="submit-t">正在加入处理队列…</div>
+    <div class="submit-d">完成后会回到工作台，<br>右上角铃铛会提示你 AI 任务进展</div>
+  </div>
+</div>
+
+<script>
+  let _hasFiles = false;
+
+  function dz(action, e){
+    e.preventDefault();
+    const z = document.getElementById('drop-zone');
+    if(action==='over') z.classList.add('dragover');
+    if(action==='out') z.classList.remove('dragover');
+    if(action==='drop'){
+      z.classList.remove('dragover');
+      mockSelectFiles();
+    }
+  }
+
+  // mock：点"浏览文件" / 拖文件 → 展开已选文件区 + 启用提交按钮
+  function mockSelectFiles(){
+    document.getElementById('files-section').classList.add('show');
+    document.getElementById('foot-meta').innerHTML = '<b>3 个文件</b> · 共 12.1 MB · AI 已检测到 1 个含题文件';
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    _hasFiles = true;
+    if(window.lucide) lucide.createIcons();
+  }
+  function pasteHint(){ alert('演示版本：实际产品支持 ⌘V 粘贴图片/截图/文本'); }
+  function bulkHint(){ alert('演示版本：批量上传走 onboarding 流程（识别 247 个文件 + 树状预览原结构）'); }
+
+  // 上传完成 → 回到拆分版工作台，并触发异步处理 demo
+  // v3.6：不再依赖 window.opener / window.close，同标签跳转流程与首次上传一致
+  function submitUpload(){
+    if(!_hasFiles) return;
+    document.body.classList.add('submitting');
+    document.getElementById('submit-overlay').classList.add('show');
+    if(window.lucide) lucide.createIcons();
+
+    // 1.6 秒后回到工作台（模拟"加入队列"的服务器响应）
+    setTimeout(()=>{
+      try{ sessionStorage.setItem('feixiang_upload_done', '1'); }catch(e){}
+      window.location.href = '02-workbench.html?uploadDone=1';
+    }, 1600);
+  }
+
+  function closeWindow(){
+    if(document.referrer && document.referrer.indexOf('02-workbench.html') !== -1){
+      history.back();
+      return;
+    }
+    window.location.href = '02-workbench.html';
+  }
+
+  if(window.lucide) lucide.createIcons();
+</script>
+
+</body>
+</html>

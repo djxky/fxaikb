@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>飞象 AI · 老师的知识库 — 演示导航</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+    background:#F7F6F3;color:#1A1A1A;
+    min-height:100vh;line-height:1.6;
+    -webkit-font-smoothing:antialiased;font-feature-settings:"kern" 1,"liga" 1;
+  }
+  ::selection{background:rgba(201,167,110,.32)}
+
+  /* ============ 顶部 ============ */
+  .nav-page{
+    max-width:1080px;margin:0 auto;padding:64px 32px 80px;
+  }
+  .nav-head{
+    display:flex;align-items:flex-start;gap:16px;margin-bottom:48px;
+  }
+  .nav-logo{
+    width:44px;height:44px;border-radius:10px;
+    background:linear-gradient(135deg,#1A1A1A 0%,#3A3733 100%);
+    display:grid;place-items:center;flex-shrink:0;
+    box-shadow:0 2px 6px rgba(0,0,0,.10);
+  }
+  .nav-logo i{width:22px;height:22px;color:#C9A76E}
+  .nav-title-block{flex:1}
+  .nav-eyebrow{
+    font-size:11.5px;color:#A87E2C;letter-spacing:.18em;text-transform:uppercase;
+    font-weight:600;margin-bottom:6px;
+  }
+  .nav-title{
+    font-size:32px;font-weight:600;color:#1A1A1A;
+    letter-spacing:-.018em;line-height:1.18;margin-bottom:12px;
+  }
+  .nav-sub{
+    font-size:14.5px;color:#5A5550;line-height:1.7;max-width:620px;
+  }
+  .nav-sub b{color:#1A1A1A;font-weight:600;border-bottom:1px solid rgba(201,167,110,.55)}
+
+  /* ============ 演示故事条 ============ */
+  .nav-story{
+    background:#FFFFFF;border:1px solid #ECE9E2;border-radius:12px;
+    padding:18px 22px;margin-bottom:36px;
+    display:flex;align-items:center;gap:18px;
+  }
+  .nav-story-tag{
+    font-size:10.5px;font-weight:600;letter-spacing:.16em;color:#A87E2C;
+    text-transform:uppercase;
+    padding:3px 8px;border-radius:4px;background:rgba(201,167,110,.13);
+    flex-shrink:0;
+  }
+  .nav-story-text{
+    font-size:13px;color:#5A5550;line-height:1.65;flex:1;
+  }
+  .nav-story-text b{color:#1A1A1A;font-weight:600}
+
+  /* ============ 场景卡片网格 ============ */
+  .nav-section-h{
+    font-size:11.5px;color:#7A766F;letter-spacing:.18em;text-transform:uppercase;
+    font-weight:600;margin:0 0 14px 4px;
+  }
+  .nav-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
+    margin-bottom:36px;
+  }
+  .nav-card{
+    background:#FFFFFF;border:1px solid #ECE9E2;border-radius:12px;
+    padding:22px 22px 18px;cursor:pointer;text-decoration:none;color:inherit;
+    display:flex;flex-direction:column;gap:12px;
+    transition:all .18s cubic-bezier(.4,0,.2,1);position:relative;
+    min-height:160px;
+  }
+  .nav-card:hover{
+    transform:translateY(-2px);
+    border-color:#D4CFC8;
+    box-shadow:0 8px 24px rgba(40,32,16,.08), 0 2px 6px rgba(40,32,16,.04);
+  }
+  .nav-card-head{
+    display:flex;align-items:center;gap:10px;
+  }
+  .nav-card-num{
+    width:24px;height:24px;border-radius:6px;
+    background:#F0EDE7;color:#7A6840;font-size:12px;font-weight:600;
+    display:grid;place-items:center;font-variant-numeric:tabular-nums;
+    flex-shrink:0;
+  }
+  .nav-card:hover .nav-card-num{
+    background:#1A1A1A;color:#FAFAF8;
+  }
+  .nav-card-tag{
+    font-size:10.5px;color:#9A968F;letter-spacing:.06em;
+    padding:2px 8px;border-radius:4px;background:#FAFAF8;border:1px solid #ECE9E2;
+    margin-left:auto;
+  }
+  .nav-card-tag.pending{background:#FBF7EE;color:#A87E2C;border-color:#F0E8D2}
+  .nav-card h3{
+    font-size:16px;font-weight:600;color:#1A1A1A;
+    letter-spacing:-.005em;line-height:1.35;
+  }
+  .nav-card-desc{
+    font-size:12.5px;color:#7A766F;line-height:1.65;flex:1;
+  }
+  .nav-card-foot{
+    display:flex;align-items:center;gap:6px;margin-top:6px;
+    font-size:12px;color:#5A5550;font-weight:500;
+  }
+  .nav-card-foot [data-lucide]{width:13px;height:13px}
+  .nav-card:hover .nav-card-foot{color:#1A1A1A}
+
+  /* 高亮卡片：推荐路径起点 */
+  .nav-card.highlight{
+    background:linear-gradient(180deg,#FFFFFF 0%,#FBF7EE 100%);
+    border-color:#E8DCBE;
+  }
+  .nav-card.highlight .nav-card-num{background:#A87E2C;color:#FAFAF8}
+  .nav-card.highlight:hover .nav-card-num{background:#1A1A1A}
+  .nav-card.highlight::before{
+    content:'推荐起点';
+    position:absolute;top:-8px;left:18px;
+    font-size:10px;font-weight:600;color:#FAFAF8;letter-spacing:.08em;
+    background:#A87E2C;padding:2px 8px;border-radius:3px;
+  }
+
+  /* ============ 底部资源 ============ */
+  .nav-foot{
+    border-top:1px solid #ECE9E2;padding-top:24px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:18px 24px;
+    font-size:12px;color:#7A766F;
+  }
+  .nav-foot a{
+    color:#5A5550;text-decoration:none;
+    display:inline-flex;align-items:center;gap:5px;
+    transition:color .12s;
+  }
+  .nav-foot a:hover{color:#1A1A1A}
+  .nav-foot a [data-lucide]{width:12px;height:12px;color:#A8A39B}
+  .nav-foot a:hover [data-lucide]{color:#7A6840}
+  .nav-foot-meta{
+    margin-left:auto;font-size:11px;color:#A8A39B;letter-spacing:.04em;
+  }
+
+  /* 响应式 */
+  @media (max-width:760px){
+    .nav-page{padding:40px 20px 60px}
+    .nav-head{flex-direction:column;gap:12px}
+    .nav-title{font-size:26px}
+    .nav-grid{grid-template-columns:1fr}
+    .nav-card{min-height:auto}
+  }
+</style>
+</head>
+<body>
+
+<div class="nav-page">
+
+  <!-- ============ 顶部品牌 + 一句话定位 ============ -->
+  <header class="nav-head">
+    <div class="nav-logo"><i data-lucide="sparkles"></i></div>
+    <div class="nav-title-block">
+      <div class="nav-eyebrow">飞象 AI · 教师端</div>
+      <h1 class="nav-title">老师的知识库</h1>
+      <p class="nav-sub">
+        把老师手头的<b>死文件</b>，结构化成<b>活的知识网络</b>，AI 在网络上帮老师做事。<br>
+        默认是激活的，不需要喊。
+      </p>
+    </div>
+  </header>
+
+  <!-- ============ 演示故事条 ============ -->
+  <div class="nav-story">
+    <span class="nav-story-tag">演示动线</span>
+    <p class="nav-story-text">
+      建议按顺序点 <b>1 → 2 → 3</b> 看完整故事：新老师先看入门指南 → 首次导入资料 → 进入日常工作台。
+      其余卡片是单独页面，可任选浏览。
+    </p>
+  </div>
+
+  <!-- ============ 主流程场景 ============ -->
+  <div class="nav-section-h">主流程 · 老师的一天</div>
+  <div class="nav-grid">
+
+    <a class="nav-card highlight" href="06-welcome-guide.html">
+      <div class="nav-card-head">
+        <span class="nav-card-num">1</span>
+        <span class="nav-card-tag">推荐起点</span>
+      </div>
+      <h3>新老师入门指南</h3>
+      <p class="nav-card-desc">
+        第一条预置对话和图文指南，先告诉老师飞象能做什么，再引导她开始导入自己的资料。
+      </p>
+      <div class="nav-card-foot">
+        <span>打开入门指南</span>
+        <i data-lucide="arrow-right"></i>
+      </div>
+    </a>
+
+    <a class="nav-card" href="01-empty-onboarding.html">
+      <div class="nav-card-head">
+        <span class="nav-card-num">2</span>
+        <span class="nav-card-tag">首次导入</span>
+      </div>
+      <h3>首次导入首页</h3>
+      <p class="nav-card-desc">
+        「张老师，欢迎」空态首页。点击上传卡片后进入扫描完成页，演示 5 秒进工作台的渐进可用逻辑。
+      </p>
+      <div class="nav-card-foot">
+        <span>看扫描预览 + 渐进可用</span>
+        <i data-lucide="arrow-right"></i>
+      </div>
+    </a>
+
+    <a class="nav-card" href="02-workbench.html">
+      <div class="nav-card-head">
+        <span class="nav-card-num">3</span>
+        <span class="nav-card-tag">日常使用</span>
+      </div>
+      <h3>老师的日常工作台</h3>
+      <p class="nav-card-desc">
+        左栏满是文件夹树，中栏最近素材网格，右栏 AI 常驻待命。
+        这是老师每天打开第一眼看到的样子：素材是主体，AI 是辅助。
+      </p>
+      <div class="nav-card-foot">
+        <span>进入老用户工作台</span>
+        <i data-lucide="arrow-right"></i>
+      </div>
+    </a>
+
+    <a class="nav-card" href="03-file-preview.html">
+      <div class="nav-card-head">
+        <span class="nav-card-num">4</span>
+        <span class="nav-card-tag">查阅素材</span>
+      </div>
+      <h3>打开一份课件预览</h3>
+      <p class="nav-card-desc">
+        点开「二次函数图像与性质」PPT，看到面包屑、来源、可操作菜单。
+        右栏锁定到当前文件，可以直接「问 AI 关于这个文件」或「AI 录入题库」。
+      </p>
+      <div class="nav-card-foot">
+        <span>进入工作台 · 自行点开 PPT</span>
+        <i data-lucide="arrow-right"></i>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ============ 题库场景 ============ -->
+  <div class="nav-section-h">题库与对话 · 产物沉淀</div>
+  <div class="nav-grid">
+
+    <a class="nav-card" href="04-qbank.html">
+      <div class="nav-card-head">
+        <span class="nav-card-num">5</span>
+        <span class="nav-card-tag">我的题目</span>
+      </div>
+      <h3>我的题目</h3>
+      <p class="nav-card-desc">
+        按学科 / 知识点 / 教材章节浏览题目。选中加入题目篮，一键去组卷或组题。
+      </p>
+      <div class="nav-card-foot">
+        <span>看题库主页 + 组题工作流</span>
+        <i data-lucide="arrow-right"></i>
+      </div>
+    </a>
+
+    <a class="nav-card" href="05-recent-chat.html">
+      <div class="nav-card-head">
+        <span class="nav-card-num">6</span>
+        <span class="nav-card-tag">最近对话</span>
+      </div>
+      <h3>最近对话</h3>
+      <p class="nav-card-desc">
+        找回 AI 产物，继续对话，并把有价值的回答保存到知识库。
+      </p>
+      <div class="nav-card-foot">
+        <span>查看历史对话与产物</span>
+        <i data-lucide="arrow-right"></i>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ============ 知识图谱 ============ -->
+  <div class="nav-section-h">知识地图 · 跳转研发实时数据 demo</div>
+  <div class="nav-grid">
+
+    <a class="nav-card" href="https://mapi.feixiangxingqiu.biz/fedebug/agora/feat/wiki-knowledge-graph/index.html#/knowledge-graph?kbId=3" target="_blank" rel="noopener noreferrer">
+      <div class="nav-card-head">
+        <span class="nav-card-num">7</span>
+        <span class="nav-card-tag">实时数据 · 新窗口</span>
+      </div>
+      <h3>知识图谱（Wiki KB 3）</h3>
+      <p class="nav-card-desc">
+        v1 阶段不再自建图谱可视化，直接复用研发已上线的 Wiki 血缘图（节点 = Wiki 页 / 原文件，边 = 目录 / 双链 / 源文件 / 实体提及）。仅供内部对齐，不进老师核心使用流程。
+      </p>
+      <div class="nav-card-foot">
+        <span>跳转研发 demo（新窗口）</span>
+        <i data-lucide="external-link"></i>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ============ 底部资源 ============ -->
+  <footer class="nav-foot">
+    <a href="00-split-index.html">
+      <i data-lucide="list-ordered"></i>
+      演示顺序说明
+    </a>
+    <a href="README.md">
+      <i data-lucide="book-open"></i>
+      README
+    </a>
+    <span class="nav-foot-meta">v26 · knowledge-base demo</span>
+  </footer>
+
+</div>
+
+<script>
+  if(window.lucide) lucide.createIcons();
+</script>
+</body>
+</html>
