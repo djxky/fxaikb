@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>飞象 AI · 知识库 · 知识图谱</title>
+<script src="https://unpkg.com/lucide@latest" defer onload="window.renderLucideIcons ? window.renderLucideIcons() : (window.lucide && lucide.createIcons())"></script>
+<script src="https://unpkg.com/d3@7"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Source Han Sans SC","Helvetica Neue",sans-serif;
+    background:#F7F6F3;color:#1A1A1A;font-size:14px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;overflow:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit;border:none;background:none;cursor:pointer;color:inherit}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#DDD8CF;border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  [data-lucide]{stroke-width:1.75}
+
+  /* 顶栏（同 workbench） */
+  .topbar{
+    height:52px;display:flex;align-items:center;gap:12px;
+    padding:0 18px;border-bottom:1px solid #ECE9E2;
+    background:rgba(247,246,243,.92);backdrop-filter:blur(14px);
+    position:relative;z-index:50;
+  }
+  .ctx-back{
+    width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:#7A766F;
+  }
+  .ctx-back:hover{background:#F0EDE7;color:#1A1A1A}
+  .ctx-back [data-lucide]{width:16px;height:16px}
+  .brand{
+    display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px;color:#1A1A1A;
+    padding-right:14px;border-right:1px solid #ECE9E2;height:28px;
+  }
+  .brand-mark{
+    width:22px;height:22px;border-radius:6px;
+    background:linear-gradient(135deg,#1A1A1A 0%,#3A3A3A 100%);
+    display:grid;place-items:center;color:#FBF7EE;font-size:11px;font-weight:700;
+  }
+  .brand-sub{color:#9A968F;font-weight:500;font-size:13px}
+  .page-title{
+    font-size:14px;color:#5A5550;display:flex;align-items:center;gap:8px;
+  }
+  .page-title [data-lucide]{width:14px;height:14px;color:#9A968F}
+  .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .top-btn{
+    height:30px;padding:0 12px;border-radius:7px;font-size:12.5px;color:#3A3A3A;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .top-btn:hover{background:#F0EDE7}
+  .top-btn [data-lucide]{width:14px;height:14px}
+
+  /* 主区域两栏 */
+  .layout{
+    display:grid;grid-template-columns:1fr 360px;
+    height:calc(100vh - 52px);
+  }
+
+  /* ?embed=1 模式：嵌入到 workbench 中栏时使用，隐藏顶栏和右侧详情 */
+  body.embed .topbar{display:none}
+  body.embed .layout{
+    grid-template-columns:1fr;
+    height:100vh;
+  }
+  body.embed .panel{display:none}
+  /* embed 模式下 hint 卡片更轻 */
+  body.embed .canvas-hint{top:14px;left:14px;right:auto}
+  body.embed .legend{left:14px;bottom:14px}
+  body.embed .ctrls{right:14px;bottom:14px}
+
+  /* 图谱画布 */
+  .canvas-wrap{
+    position:relative;background:#F7F6F3;overflow:hidden;
+  }
+  .canvas-wrap svg{
+    display:block;width:100%;height:100%;cursor:grab;
+  }
+  .canvas-wrap svg:active{cursor:grabbing}
+
+  /* 图例 / 控制面板（左下角浮层） */
+  .legend{
+    position:absolute;left:18px;bottom:18px;z-index:5;
+    background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+    border:1px solid #ECE9E2;border-radius:10px;
+    padding:12px 14px;
+    box-shadow:0 4px 14px rgba(0,0,0,.06);
+  }
+  .legend-title{
+    font-size:11px;color:#9A968F;letter-spacing:.08em;font-weight:600;
+    text-transform:uppercase;margin-bottom:8px;
+  }
+  .legend-item{
+    display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;color:#3A3A3A;
+  }
+  .legend-item:last-child{margin-bottom:0}
+  .legend-swatch{
+    width:11px;height:11px;border-radius:50%;
+  }
+  .legend-swatch.math{background:#C9A76E;border:1px solid #A87E2C}
+  .legend-swatch.cn{background:#7A8FA8;border:1px solid #5A6F8A}
+  .legend-swatch.en{background:#7DA078;border:1px solid #5A8A5C}
+  .legend-swatch.cluster{
+    width:14px;height:14px;background:#FBF7EE;border:1.5px dashed #C9A76E;border-radius:50%;
+  }
+  .legend-divider{height:1px;background:#ECE9E2;margin:8px 0}
+  .legend-hint{font-size:11px;color:#7A766F;line-height:1.5}
+
+  /* 顶部说明 */
+  .canvas-hint{
+    position:absolute;top:16px;left:18px;right:18px;z-index:5;
+    display:flex;align-items:center;gap:14px;
+  }
+  .hint-card{
+    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+    border:1px solid #ECE9E2;border-radius:8px;
+    padding:8px 12px;font-size:12px;color:#5A5550;
+    display:flex;align-items:center;gap:8px;
+  }
+  .hint-card [data-lucide]{width:13px;height:13px;color:#A87E2C}
+
+  /* 控制按钮（右下角） */
+  .ctrls{
+    position:absolute;right:18px;bottom:18px;z-index:5;
+    display:flex;flex-direction:column;gap:5px;
+    background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+    border:1px solid #ECE9E2;border-radius:10px;
+    padding:6px;box-shadow:0 4px 14px rgba(0,0,0,.06);
+  }
+  .ctrl-btn{
+    width:32px;height:32px;border-radius:7px;
+    display:grid;place-items:center;color:#5A5550;
+  }
+  .ctrl-btn:hover{background:#F0EDE7;color:#1A1A1A}
+  .ctrl-btn [data-lucide]{width:14px;height:14px}
+
+  /* 右栏：详情面板 */
+  .panel{
+    background:#FAF8F3;border-left:1px solid #ECE9E2;
+    overflow-y:auto;display:flex;flex-direction:column;
+  }
+  .panel-head{
+    padding:18px 20px 14px;border-bottom:1px solid #ECE9E2;
+  }
+  .panel-head .panel-tag{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;color:#A87E2C;letter-spacing:.06em;font-weight:600;
+    padding:3px 8px;border-radius:5px;background:#FBF7EE;border:1px solid #F0E8D2;
+    margin-bottom:10px;text-transform:uppercase;
+  }
+  .panel-title{
+    font-size:18px;font-weight:600;color:#1A1A1A;letter-spacing:-.005em;line-height:1.4;
+  }
+  .panel-meta{
+    margin-top:6px;font-size:12px;color:#7A766F;display:flex;align-items:center;gap:8px;
+  }
+  .panel-meta .sep{color:#C9C0B0}
+
+  .panel-body{flex:1;padding:18px 20px 28px;overflow-y:auto}
+  .panel-section{margin-bottom:22px}
+  .panel-section-head{
+    font-size:11px;color:#9A968F;letter-spacing:.08em;font-weight:600;
+    text-transform:uppercase;margin-bottom:10px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .panel-section-head .ai-mark{
+    margin-left:auto;display:inline-flex;align-items:center;gap:3px;
+    color:#A87E2C;font-size:10px;font-weight:500;text-transform:none;
+  }
+  .panel-section-head .ai-mark::before{
+    content:'';width:5px;height:5px;border-radius:50%;background:#C9A76E;
+  }
+
+  .summary-card{
+    background:#FFFFFF;border:1px solid #ECE9E2;border-radius:9px;
+    padding:13px 14px;font-size:13px;color:#3A3A3A;line-height:1.7;
+  }
+  .summary-card b{color:#1A1A1A;font-weight:600}
+  .summary-stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+    margin-top:10px;padding-top:10px;border-top:1px dashed #ECE9E2;
+  }
+  .stat{text-align:center}
+  .stat-v{
+    font-size:18px;font-weight:600;color:#1A1A1A;
+    font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+  }
+  .stat-l{font-size:11px;color:#9A968F;margin-top:2px}
+
+  .src-list-item{
+    display:flex;gap:9px;padding:10px 11px;border-radius:7px;
+    background:#FFFFFF;border:1px solid #ECE9E2;margin-bottom:6px;cursor:pointer;
+    transition:all .15s;
+  }
+  .src-list-item:hover{border-color:#C9C0B0;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+  .src-icon-mini{
+    width:24px;height:24px;border-radius:5px;flex-shrink:0;
+    display:grid;place-items:center;font-size:9.5px;font-weight:700;letter-spacing:-.02em;
+  }
+  .src-icon-mini.ppt{background:#FCEEEA;color:#B8624A}
+  .src-icon-mini.pdf{background:#FBF1EE;color:#A85E48}
+  .src-icon-mini.doc{background:#EAF1FB;color:#456B9E}
+  .src-icon-mini.img{background:#EDF5EC;color:#5A8A5C}
+  .src-icon-mini.ai{background:#FBF7EE;color:#A87E2C}
+  .src-icon-mini [data-lucide]{width:11px;height:11px}
+  .src-list-body{flex:1;min-width:0}
+  .src-list-t{
+    font-size:12.5px;font-weight:500;color:#1A1A1A;line-height:1.4;
+  }
+  .src-list-m{
+    font-size:11px;color:#9A968F;margin-top:2px;display:flex;gap:6px;
+  }
+  .src-list-m .sep{color:#C9C0B0}
+
+  .related-kp{
+    display:flex;flex-wrap:wrap;gap:5px;
+  }
+  .kp-chip{
+    display:inline-flex;align-items:center;
+    padding:4px 10px;border-radius:5px;font-size:12px;color:#3A3A3A;
+    background:#FFFFFF;border:1px solid #E5E1DA;cursor:pointer;
+    transition:all .12s;
+  }
+  .kp-chip:hover{background:#FBF7EE;border-color:#F0E8D2;color:#5A4F38}
+  .kp-chip.weak{color:#9A968F}
+  .kp-chip .kp-c{font-size:10.5px;color:#9A968F;margin-left:4px;font-variant-numeric:tabular-nums}
+
+  .empty-panel{
+    padding:48px 24px;text-align:center;color:#9A968F;font-size:13px;line-height:1.7;
+  }
+  .empty-panel [data-lucide]{
+    width:32px;height:32px;color:#C9C0B0;margin-bottom:12px;stroke-width:1.5;
+  }
+  .empty-panel b{color:#5A5550;font-weight:600;display:block;margin-bottom:4px}
+
+  /* 节点 hover 提示（tooltip） */
+  .tooltip{
+    position:absolute;pointer-events:none;z-index:10;
+    background:#1A1A1A;color:#FAFAF8;font-size:12px;
+    padding:6px 10px;border-radius:6px;
+    box-shadow:0 4px 12px rgba(0,0,0,.16);
+    opacity:0;transition:opacity .15s;
+  }
+  .tooltip.show{opacity:1}
+  .tooltip .tip-meta{color:#9A968F;font-size:10.5px;margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<header class="topbar">
+  <button class="ctx-back" onclick="window.location.href='02-workbench.html'" title="返回工作台">
+    <i data-lucide="arrow-left"></i>
+  </button>
+  <div class="brand">
+    <span class="brand-mark">FX</span>
+    飞象 AI<span class="brand-sub">· 知识库</span>
+  </div>
+  <div class="page-title">
+    <i data-lucide="git-branch"></i>
+    知识图谱
+  </div>
+  <div class="topbar-actions">
+    <button class="top-btn"><i data-lucide="filter"></i>筛选学科</button>
+    <button class="top-btn"><i data-lucide="layout-grid"></i>切换视图</button>
+    <button class="top-btn"><i data-lucide="download"></i>导出</button>
+  </div>
+</header>
+
+<!-- 主区域 -->
+<main class="layout">
+
+  <!-- 图谱画布 -->
+  <div class="canvas-wrap" id="canvas-wrap">
+
+    <div class="canvas-hint">
+      <div class="hint-card">
+        <i data-lucide="sparkles"></i>
+        <span>这张图由 AI 自动生成 · 节点 = 知识点 · 边 = 共现关系 · 大小 = 关联素材数</span>
+      </div>
+    </div>
+
+    <svg id="graph"></svg>
+    <div class="tooltip" id="tooltip"></div>
+
+    <div class="legend">
+      <div class="legend-title">学科</div>
+      <div class="legend-item"><span class="legend-swatch math"></span>数学（19 个知识点）</div>
+      <div class="legend-item"><span class="legend-swatch cn"></span>语文（6 个）</div>
+      <div class="legend-item"><span class="legend-swatch en"></span>英语（4 个）</div>
+      <div class="legend-divider"></div>
+      <div class="legend-hint">
+        点击节点查看详情 · 拖拽节点重排 · 滚轮缩放
+      </div>
+    </div>
+
+    <div class="ctrls">
+      <button class="ctrl-btn" title="放大" onclick="zoomBy(1.25)"><i data-lucide="zoom-in"></i></button>
+      <button class="ctrl-btn" title="缩小" onclick="zoomBy(.8)"><i data-lucide="zoom-out"></i></button>
+      <button class="ctrl-btn" title="复位" onclick="resetView()"><i data-lucide="maximize-2"></i></button>
+    </div>
+  </div>
+
+  <!-- 右栏：详情面板 -->
+  <aside class="panel" id="panel">
+    <!-- 默认空态 -->
+    <div id="panel-empty" class="empty-panel">
+      <i data-lucide="mouse-pointer-click"></i>
+      <b>点击一个节点</b>
+      右侧会显示该知识点关联的素材、相关知识点和 AI 摘要。
+    </div>
+    <!-- 节点选中态（动态渲染） -->
+    <div id="panel-content" style="display:none"></div>
+  </aside>
+
+</main>
+
+<script>
+  // ============ Mock 数据 ============
+  // 节点：知识点（subject + cluster + 关联素材数）
+  const NODES = [
+    // 数学 · 函数（5）
+    {id:'kp1', name:'二次函数', subject:'math', cluster:'函数', count:8},
+    {id:'kp2', name:'一次函数', subject:'math', cluster:'函数', count:5},
+    {id:'kp3', name:'反比例函数', subject:'math', cluster:'函数', count:3},
+    {id:'kp4', name:'函数图像', subject:'math', cluster:'函数', count:6},
+    {id:'kp5', name:'函数综合', subject:'math', cluster:'函数', count:4},
+
+    // 数学 · 几何（6）
+    {id:'kp6', name:'全等三角形', subject:'math', cluster:'几何', count:6},
+    {id:'kp7', name:'相似三角形', subject:'math', cluster:'几何', count:3},
+    {id:'kp8', name:'勾股定理', subject:'math', cluster:'几何', count:4},
+    {id:'kp9', name:'平行四边形', subject:'math', cluster:'几何', count:3},
+    {id:'kp10', name:'圆与切线', subject:'math', cluster:'几何', count:2},
+    {id:'kp11', name:'坐标系', subject:'math', cluster:'几何', count:5},
+
+    // 数学 · 方程（4）
+    {id:'kp12', name:'一元二次方程', subject:'math', cluster:'方程', count:4},
+    {id:'kp13', name:'分式方程', subject:'math', cluster:'方程', count:3},
+    {id:'kp14', name:'方程组', subject:'math', cluster:'方程', count:2},
+    {id:'kp15', name:'不等式', subject:'math', cluster:'方程', count:2},
+
+    // 数学 · 统计（4）
+    {id:'kp16', name:'数据分析', subject:'math', cluster:'统计', count:2},
+    {id:'kp17', name:'概率', subject:'math', cluster:'统计', count:2},
+    {id:'kp18', name:'分类讨论', subject:'math', cluster:'方法', count:5},
+    {id:'kp19', name:'数形结合', subject:'math', cluster:'方法', count:4},
+
+    // 语文（6）
+    {id:'kp20', name:'课文精讲', subject:'cn', cluster:'阅读', count:3},
+    {id:'kp21', name:'文言文阅读', subject:'cn', cluster:'阅读', count:2},
+    {id:'kp22', name:'议论文写作', subject:'cn', cluster:'写作', count:2},
+    {id:'kp23', name:'记叙文写作', subject:'cn', cluster:'写作', count:2},
+    {id:'kp24', name:'古诗背诵', subject:'cn', cluster:'阅读', count:1},
+    {id:'kp25', name:'情感分析', subject:'cn', cluster:'阅读', count:2},
+
+    // 英语（4）
+    {id:'kp26', name:'听力训练', subject:'en', cluster:'听说', count:1},
+    {id:'kp27', name:'完形填空', subject:'en', cluster:'阅读', count:1},
+    {id:'kp28', name:'词汇语音', subject:'en', cluster:'听说', count:1},
+    {id:'kp29', name:'阅读理解', subject:'en', cluster:'阅读', count:1},
+  ];
+
+  // 边：知识点共现（同一份素材里出现 → 产生边）
+  const LINKS = [
+    // 函数簇内
+    {source:'kp1', target:'kp4', value:5},
+    {source:'kp1', target:'kp5', value:3},
+    {source:'kp1', target:'kp12', value:4},
+    {source:'kp1', target:'kp19', value:3},
+    {source:'kp2', target:'kp4', value:4},
+    {source:'kp2', target:'kp11', value:3},
+    {source:'kp3', target:'kp4', value:2},
+    {source:'kp4', target:'kp11', value:4},
+    {source:'kp5', target:'kp19', value:2},
+
+    // 几何簇内
+    {source:'kp6', target:'kp7', value:3},
+    {source:'kp6', target:'kp8', value:2},
+    {source:'kp6', target:'kp19', value:3},
+    {source:'kp7', target:'kp19', value:2},
+    {source:'kp8', target:'kp11', value:3},
+    {source:'kp9', target:'kp11', value:2},
+    {source:'kp10', target:'kp11', value:1},
+
+    // 方程簇内
+    {source:'kp12', target:'kp13', value:2},
+    {source:'kp12', target:'kp18', value:3},
+    {source:'kp13', target:'kp14', value:1},
+    {source:'kp14', target:'kp15', value:1},
+    {source:'kp15', target:'kp18', value:2},
+
+    // 跨簇方法
+    {source:'kp18', target:'kp1', value:3},
+    {source:'kp18', target:'kp6', value:2},
+    {source:'kp19', target:'kp4', value:3},
+    {source:'kp19', target:'kp8', value:2},
+
+    // 统计簇内
+    {source:'kp16', target:'kp17', value:1},
+
+    // 语文簇
+    {source:'kp20', target:'kp25', value:2},
+    {source:'kp20', target:'kp21', value:1},
+    {source:'kp22', target:'kp23', value:1},
+    {source:'kp24', target:'kp21', value:1},
+
+    // 英语簇
+    {source:'kp26', target:'kp28', value:1},
+    {source:'kp27', target:'kp29', value:1},
+  ];
+
+  // 知识点详情数据（点击节点显示）
+  const KP_DETAIL = {
+    'kp1': {
+      summary: '<b>二次函数</b>是你这学期使用频率最高的知识点，已积累 <b>8 份素材</b>，覆盖图像、性质、综合应用三个方向。最近一次使用是今天 10:24（《二次函数图像与性质 · 导入课件》）。',
+      stats: {sources: 8, drafts: 2, conv: 5},
+      sources: [
+        {type:'ppt', title:'二次函数图像与性质 · 导入课件', meta:'PPT · 12 张 · 今天'},
+        {type:'doc', title:'二次函数 · 教学设计', meta:'Word · 4 页 · 04-15'},
+        {type:'pdf', title:'函数综合 · 拔高训练', meta:'PDF · 16 题 · 04-12'},
+        {type:'pdf', title:'2024 杭州中考 · 第 22 题（含解析）', meta:'PDF · 单题 · 03-28'},
+        {type:'ai', title:'二次函数图像导入 · 变式题集（5 道）', meta:'AI 草稿 · 未保存 · 昨天'},
+      ],
+      related: [
+        {id:'kp4', name:'函数图像', count:5},
+        {id:'kp12', name:'一元二次方程', count:4},
+        {id:'kp18', name:'分类讨论', count:3},
+        {id:'kp19', name:'数形结合', count:3},
+        {id:'kp5', name:'函数综合', count:3},
+      ]
+    },
+    'kp6': {
+      summary: '<b>全等三角形</b>是你 3-4 月的重点，公开课用过此主题。共 <b>6 份素材</b>，AI 注意到你的素材里 <b>SAS 判定</b> 出现频率最高（4 次），可能是教学难点。',
+      stats: {sources: 6, drafts: 1, conv: 3},
+      sources: [
+        {type:'ppt', title:'全等三角形 · SAS 判定', meta:'PPT · 9 张 · 04-22 公开课'},
+        {type:'pdf', title:'全等三角形 · 错题集训', meta:'PDF · 12 题 · 04-15'},
+        {type:'img', title:'板书照 · 三角形全等条件梳理', meta:'图片 · 04-22'},
+        {type:'doc', title:'全等三角形教学反思', meta:'Word · 2 页 · 04-23'},
+      ],
+      related: [
+        {id:'kp7', name:'相似三角形', count:3},
+        {id:'kp19', name:'数形结合', count:3},
+        {id:'kp8', name:'勾股定理', count:2},
+        {id:'kp18', name:'分类讨论', count:2},
+      ]
+    },
+    'kp18': {
+      summary: '<b>分类讨论</b>是 AI 自动识别的「方法类」知识点，跨多个内容模块。你的对话历史显示，这是八(3)班的高频错点（连续 3 天函数错题集中在分类讨论）。',
+      stats: {sources: 5, drafts: 1, conv: 4},
+      sources: [
+        {type:'ai', title:'分类讨论专题 · 讲评提纲', meta:'AI 生成 · 待保存 · 今天'},
+        {type:'pdf', title:'函数综合 · 拔高训练（含分类讨论 6 题）', meta:'PDF · 04-12'},
+        {type:'doc', title:'月考分析 · 讲评稿', meta:'Word · 04-26'},
+      ],
+      related: [
+        {id:'kp1', name:'二次函数', count:3},
+        {id:'kp12', name:'一元二次方程', count:3},
+        {id:'kp15', name:'不等式', count:2},
+        {id:'kp6', name:'全等三角形', count:2},
+      ]
+    },
+    'kp8': {
+      summary: '<b>勾股定理</b> 4 月集中讲过，包含 1 份学生手写解题的扫描件，AI 已识别 <b>6 种典型错法</b>。',
+      stats: {sources: 4, drafts: 1, conv: 2},
+      sources: [
+        {type:'ppt', title:'勾股定理 · 古今证法', meta:'PPT · 8 张 · 公开课素材'},
+        {type:'img', title:'学生手写解题 · 勾股定理（8 份扫描）', meta:'图片 · 04-15'},
+        {type:'ai', title:'八(3)班勾股定理 · 学习路径建议', meta:'AI 草稿 · 未保存 · 04-22'},
+      ],
+      related: [
+        {id:'kp11', name:'坐标系', count:3},
+        {id:'kp19', name:'数形结合', count:2},
+        {id:'kp6', name:'全等三角形', count:2},
+      ]
+    },
+    'kp4': {
+      summary: '<b>函数图像</b>是函数模块的「中心节点」，几乎所有函数素材都涉及它。AI 建议把这 6 份素材组成一个「函数图像专题」便于复习课使用。',
+      stats: {sources: 6, drafts: 0, conv: 2},
+      sources: [
+        {type:'ppt', title:'二次函数图像与性质 · 导入课件', meta:'PPT · 12 张 · 今天'},
+        {type:'doc', title:'一次函数复习课', meta:'PPT · 10 张 · 03-22'},
+        {type:'pdf', title:'函数综合 · 拔高训练', meta:'PDF · 04-12'},
+      ],
+      related: [
+        {id:'kp1', name:'二次函数', count:5},
+        {id:'kp2', name:'一次函数', count:4},
+        {id:'kp19', name:'数形结合', count:3},
+        {id:'kp11', name:'坐标系', count:4},
+      ]
+    },
+  };
+
+  // ============ D3 力导向图 ============
+  const COLOR = {
+    math: {fill:'#C9A76E', stroke:'#A87E2C', label:'#3A3025'},
+    cn:   {fill:'#7A8FA8', stroke:'#5A6F8A', label:'#2C3E55'},
+    en:   {fill:'#7DA078', stroke:'#5A8A5C', label:'#2E4A30'},
+  };
+
+  const svg = d3.select('#graph');
+  const wrap = document.getElementById('canvas-wrap');
+
+  function getSize(){
+    return {
+      w: wrap.clientWidth  || 800,
+      h: wrap.clientHeight || 560,
+    };
+  }
+  let {w: WIDTH, h: HEIGHT} = getSize();
+  svg.attr('viewBox', `0 0 ${WIDTH} ${HEIGHT}`)
+     .attr('width', WIDTH).attr('height', HEIGHT);
+
+  // 当 iframe 被 resize（从 workbench 嵌入时初始尺寸可能为 0）
+  const resizeObs = new ResizeObserver(()=>{
+    const {w, h} = getSize();
+    if(w === WIDTH && h === HEIGHT) return;
+    WIDTH = w; HEIGHT = h;
+    svg.attr('viewBox', `0 0 ${WIDTH} ${HEIGHT}`)
+       .attr('width', WIDTH).attr('height', HEIGHT);
+    sim.force('center', d3.forceCenter(WIDTH/2, HEIGHT/2))
+       .force('clusterX', d3.forceX(d=>{
+         if(d.subject==='math') return WIDTH * 0.42;
+         if(d.subject==='cn')   return WIDTH * 0.78;
+         if(d.subject==='en')   return WIDTH * 0.20;
+       }).strength(0.15))
+       .force('clusterY', d3.forceY(d=>{
+         if(d.subject==='math') return HEIGHT * 0.55;
+         if(d.subject==='cn')   return HEIGHT * 0.30;
+         if(d.subject==='en')   return HEIGHT * 0.30;
+       }).strength(0.15))
+       .alpha(0.4).restart();
+  });
+  resizeObs.observe(wrap);
+
+  // 容器（用于 zoom/pan）
+  const container = svg.append('g').attr('class','container');
+
+  // 缩放
+  const zoom = d3.zoom()
+    .scaleExtent([0.4, 3])
+    .on('zoom', (e)=>{ container.attr('transform', e.transform); });
+  svg.call(zoom);
+
+  function zoomBy(factor){
+    svg.transition().duration(280).call(zoom.scaleBy, factor);
+  }
+  function resetView(){
+    svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity);
+  }
+
+  // 初始化连接 source/target 引用
+  const nodeMap = new Map(NODES.map(n=>[n.id, n]));
+  const links = LINKS.map(l=>({...l, source: nodeMap.get(l.source), target: nodeMap.get(l.target)}));
+
+  // 节点半径
+  const radius = (n)=> 8 + Math.sqrt(n.count) * 4;
+
+  // 力模拟
+  const sim = d3.forceSimulation(NODES)
+    .force('link', d3.forceLink(links).id(d=>d.id)
+      .distance(l=> 60 + (5 - Math.min(l.value,5)) * 10)
+      .strength(0.55))
+    .force('charge', d3.forceManyBody().strength(-260))
+    .force('center', d3.forceCenter(WIDTH/2, HEIGHT/2))
+    .force('collide', d3.forceCollide().radius(d=> radius(d) + 8))
+    // 同学科聚类
+    .force('clusterX', d3.forceX(d=>{
+      if(d.subject==='math') return WIDTH * 0.42;
+      if(d.subject==='cn')   return WIDTH * 0.78;
+      if(d.subject==='en')   return WIDTH * 0.20;
+    }).strength(0.15))
+    .force('clusterY', d3.forceY(d=>{
+      if(d.subject==='math') return HEIGHT * 0.55;
+      if(d.subject==='cn')   return HEIGHT * 0.30;
+      if(d.subject==='en')   return HEIGHT * 0.30;
+    }).strength(0.15));
+
+  // 绘制连线
+  const link = container.append('g')
+    .attr('class','links')
+    .attr('stroke','#C9C0B0')
+    .attr('stroke-opacity', 0.42)
+    .selectAll('line')
+    .data(links)
+    .join('line')
+    .attr('stroke-width', d=> 0.8 + Math.min(d.value, 5) * 0.35);
+
+  // 节点 group
+  const node = container.append('g')
+    .attr('class','nodes')
+    .selectAll('g')
+    .data(NODES)
+    .join('g')
+    .attr('class','node')
+    .style('cursor','pointer')
+    .call(d3.drag()
+      .on('start', dragStart)
+      .on('drag', dragged)
+      .on('end', dragEnd))
+    .on('click', (e, d)=>{ selectNode(d); })
+    .on('mouseenter', (e, d)=>{ showTip(e, d); highlightNeighbors(d, true); })
+    .on('mouseleave', (e, d)=>{ hideTip(); highlightNeighbors(d, false); });
+
+  // 节点圆
+  node.append('circle')
+    .attr('r', d=> radius(d))
+    .attr('fill', d=> COLOR[d.subject].fill)
+    .attr('fill-opacity', 0.78)
+    .attr('stroke', d=> COLOR[d.subject].stroke)
+    .attr('stroke-width', 1.2);
+
+  // 节点 label
+  node.append('text')
+    .attr('text-anchor','middle')
+    .attr('dy', d=> radius(d) + 13)
+    .attr('font-size', d=> Math.max(11, 10 + d.count * 0.15))
+    .attr('font-weight', 500)
+    .attr('fill', d=> COLOR[d.subject].label)
+    .attr('paint-order','stroke')
+    .attr('stroke','#F7F6F3')
+    .attr('stroke-width', 3)
+    .text(d=> d.name);
+
+  // 先静默预热，让节点布局收敛后再开始渲染（避免初始帧所有节点堆在中心）
+  sim.stop();
+  for(let i=0; i<280; i++) sim.tick();
+
+  // 手动渲染一次初始位置
+  link
+    .attr('x1', d=> d.source.x).attr('y1', d=> d.source.y)
+    .attr('x2', d=> d.target.x).attr('y2', d=> d.target.y);
+  node.attr('transform', d=> `translate(${d.x},${d.y})`);
+
+  // 然后再启动动画继续收敛剩余
+  sim.alpha(0.05).restart();
+  sim.on('tick', ()=>{
+    link
+      .attr('x1', d=> d.source.x).attr('y1', d=> d.source.y)
+      .attr('x2', d=> d.target.x).attr('y2', d=> d.target.y);
+    node.attr('transform', d=> `translate(${d.x},${d.y})`);
+  });
+
+  function dragStart(e, d){
+    if(!e.active) sim.alphaTarget(0.3).restart();
+    d.fx = d.x; d.fy = d.y;
+  }
+  function dragged(e, d){ d.fx = e.x; d.fy = e.y; }
+  function dragEnd(e, d){
+    if(!e.active) sim.alphaTarget(0);
+    d.fx = null; d.fy = null;
+  }
+
+  // 高亮邻居
+  function highlightNeighbors(target, on){
+    const neighborIds = new Set([target.id]);
+    links.forEach(l=>{
+      if(l.source.id === target.id) neighborIds.add(l.target.id);
+      if(l.target.id === target.id) neighborIds.add(l.source.id);
+    });
+    node.select('circle').attr('fill-opacity', d=>{
+      if(!on) return 0.78;
+      return neighborIds.has(d.id) ? 0.95 : 0.18;
+    });
+    node.select('text').attr('fill-opacity', d=>{
+      if(!on) return 1;
+      return neighborIds.has(d.id) ? 1 : 0.25;
+    });
+    link
+      .attr('stroke-opacity', l=>{
+        if(!on) return 0.42;
+        return (l.source.id===target.id || l.target.id===target.id) ? 0.85 : 0.08;
+      })
+      .attr('stroke', l=>{
+        if(!on) return '#C9C0B0';
+        return (l.source.id===target.id || l.target.id===target.id) ? '#A87E2C' : '#C9C0B0';
+      });
+  }
+
+  // tooltip
+  const tooltip = document.getElementById('tooltip');
+  function showTip(e, d){
+    tooltip.innerHTML = `<b>${d.name}</b><div class="tip-meta">${d.subject==='math'?'数学':d.subject==='cn'?'语文':'英语'} · ${d.cluster} · ${d.count} 份素材</div>`;
+    tooltip.style.left = (e.offsetX + 14) + 'px';
+    tooltip.style.top = (e.offsetY + 14) + 'px';
+    tooltip.classList.add('show');
+  }
+  function hideTip(){ tooltip.classList.remove('show'); }
+
+  // 点击节点 → 渲染右栏详情
+  function selectNode(d){
+    document.getElementById('panel-empty').style.display='none';
+    const c = document.getElementById('panel-content');
+    c.style.display='block';
+    const detail = KP_DETAIL[d.id];
+    const subjectName = d.subject==='math'?'数学':d.subject==='cn'?'语文':'英语';
+
+    if(!detail){
+      // 没有 mock 详情的节点 → 用最简模板
+      c.innerHTML = `
+        <div class="panel-head">
+          <div class="panel-tag">${subjectName} · ${d.cluster}</div>
+          <div class="panel-title">${d.name}</div>
+          <div class="panel-meta">
+            <span>${d.count} 份关联素材</span>
+            <span class="sep">·</span>
+            <span>暂无 AI 摘要</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="empty-panel" style="padding:32px 20px">
+            <i data-lucide="file-search"></i>
+            <b>该知识点的素材较少</b>
+            上传更多相关素材，AI 会自动生成详情。
+          </div>
+        </div>`;
+      if(window.lucide) lucide.createIcons();
+      return;
+    }
+
+    c.innerHTML = `
+      <div class="panel-head">
+        <div class="panel-tag">${subjectName} · ${d.cluster}</div>
+        <div class="panel-title">${d.name}</div>
+        <div class="panel-meta">
+          <span>${detail.stats.sources} 份素材</span>
+          <span class="sep">·</span>
+          <span>${detail.stats.drafts} 份 AI 草稿</span>
+          <span class="sep">·</span>
+          <span>${detail.stats.conv} 次对话</span>
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <div class="panel-section">
+          <div class="panel-section-head">
+            AI 摘要
+            <span class="ai-mark">基于知识库</span>
+          </div>
+          <div class="summary-card">
+            ${detail.summary}
+            <div class="summary-stats">
+              <div class="stat"><div class="stat-v">${detail.stats.sources}</div><div class="stat-l">素材</div></div>
+              <div class="stat"><div class="stat-v">${detail.stats.drafts}</div><div class="stat-l">AI 草稿</div></div>
+              <div class="stat"><div class="stat-v">${detail.stats.conv}</div><div class="stat-l">对话</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-head">关联素材</div>
+          ${detail.sources.map(s=>`
+            <div class="src-list-item">
+              <div class="src-icon-mini ${s.type}">${
+                s.type==='ai' ? '<i data-lucide="sparkles"></i>' :
+                s.type==='img' ? '<i data-lucide="image"></i>' :
+                s.type.toUpperCase()
+              }</div>
+              <div class="src-list-body">
+                <div class="src-list-t">${s.title}</div>
+                <div class="src-list-m">${s.meta}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-head">相关知识点</div>
+          <div class="related-kp">
+            ${detail.related.map(r=>`
+              <span class="kp-chip" onclick="jumpToNode('${r.id}')">${r.name}<span class="kp-c">${r.count}</span></span>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>`;
+
+    if(window.lucide) lucide.createIcons();
+
+    // 同步高亮节点
+    node.select('circle')
+      .attr('stroke-width', n=> n.id===d.id ? 2.5 : 1.2)
+      .attr('stroke', n=> n.id===d.id ? '#1A1A1A' : COLOR[n.subject].stroke);
+  }
+
+  function jumpToNode(id){
+    const n = nodeMap.get(id);
+    if(n) selectNode(n);
+  }
+
+  // 窗口 resize
+  window.addEventListener('resize', ()=>{
+    WIDTH = wrap.clientWidth;
+    HEIGHT = wrap.clientHeight;
+    svg.attr('viewBox', `0 0 ${WIDTH} ${HEIGHT}`);
+    sim.force('center', d3.forceCenter(WIDTH/2, HEIGHT/2));
+    sim.alpha(0.3).restart();
+  });
+
+  // 初始化图标
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // ?embed=1 模式：嵌入到 workbench 时启用，隐藏顶栏和右侧详情
+    const isEmbed = new URLSearchParams(window.location.search).get('embed') === '1';
+    if(isEmbed){
+      document.body.classList.add('embed');
+    }
+    if(window.lucide) lucide.createIcons();
+    // 非 embed 模式才默认选中节点（embed 模式右侧详情被隐藏，没必要预选）
+    if(!isEmbed){
+      setTimeout(()=>{
+        const initNode = nodeMap.get('kp1');
+        if(initNode) selectNode(initNode);
+      }, 600);
+    }
+  });
+</script>
+
+</body>
+</html>

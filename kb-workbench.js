@@ -404,19 +404,7 @@
       `;
     }
     if(isExercise){
-      return `
-        <article class="art-doc-preview">
-          <h1>${name}</h1>
-          <p class="art-doc-sub">10 道选择题 · 含答案与解析 · 难度参考你的 2024 真题</p>
-          <h2>第 1 题 【基础】</h2>
-          <p>已知二次函数 y = ax² + bx + c（a ≠ 0）的图像开口向上，且经过原点，则下列判断正确的是（&nbsp;&nbsp;&nbsp;&nbsp;）</p>
-          <p>A. a &gt; 0, c = 0 &nbsp;&nbsp; B. a &lt; 0, c = 0 &nbsp;&nbsp; C. a &gt; 0, c &gt; 0 &nbsp;&nbsp; D. a &lt; 0, c &lt; 0</p>
-          <p style="color:#888;font-size:13px;margin-top:6px">答案：A &nbsp;|&nbsp; 考点：a 决定开口 / c 是 y 轴截距 &nbsp;|&nbsp; 易错：选 C（误以为开口向上 c 一定大于 0）</p>
-          <h2>第 2 题 【基础】</h2>
-          <p>...（共 10 题，预览仅展示前 1 题）</p>
-          <p class="art-doc-tail">— 共 600 字 · AI 已参照你的真题难度生成 —</p>
-        </article>
-      `;
+      return _renderExerciseArtifactHTML(name);
     }
     if(isReview){
       return `
@@ -439,6 +427,223 @@
         <p>预览内容（demo 占位）...</p>
       </article>
     `;
+  }
+
+  /* ===== AI 组题产物预览（v3.7 重做 — 体现知识库优势）=====
+     设计意图：
+       - 题不是 AI 凭空写的，而是基于老师上传的真题/讲义改编 → 每道题都标注"来源文件 · 第 X 题"
+       - 头部"编辑 / 下载"，让老师能继续打磨产物（导出 docx / 加入题目篮 / 进组卷）
+       - 单题级"编辑"按钮，把题面变 contenteditable，老师可改题干 / 选项 / 答案
+       - 来源 chip 可点 → 跳到原文件预览，闭环"AI 答案 ⇄ 老师素材"
+     这一处是飞象 AI 区别于通用大模型的核心说服力 */
+  function _renderExerciseArtifactHTML(name){
+    // 来源文件清单（mock — 与左栏知识库一致）
+    const sourceFiles = [
+      { name:'2024 杭州中考真题', ext:'.pdf', path:'数学 › 月考与中考' },
+      { name:'八(3)班·第一次月考', ext:'.pdf', path:'数学 › 月考与中考' },
+      { name:'函数综合·拔高训练', ext:'.pdf', path:'数学 › 八下·二次函数' }
+    ];
+
+    // 题目 mock 数据 — 每道题都标注"出处"（哪份文件第几题）
+    const questions = [
+      {
+        idx:1, level:'基础',
+        source:{ file:'2024 杭州中考真题.pdf', loc:'第 12 题（改编）' },
+        stem:'已知二次函数 y = ax² + bx + c（a ≠ 0）的图像开口向上，且经过原点，则下列判断正确的是（&nbsp;&nbsp;&nbsp;&nbsp;）',
+        options:['A. a &gt; 0, c = 0','B. a &lt; 0, c = 0','C. a &gt; 0, c &gt; 0','D. a &lt; 0, c &lt; 0'],
+        answer:'A',
+        analysis:'a 决定开口方向（&gt;0 向上）；图像过原点 → 代入 (0,0) 得 c = 0。',
+        wrong:'选 C — 误以为开口向上 c 一定 &gt; 0'
+      },
+      {
+        idx:2, level:'基础',
+        source:{ file:'函数综合·拔高训练.pdf', loc:'第 5 题（原题）' },
+        stem:'抛物线 y = (x - 2)² + 3 的顶点坐标是（&nbsp;&nbsp;&nbsp;&nbsp;）',
+        options:['A. (2, 3)','B. (-2, 3)','C. (2, -3)','D. (-2, -3)'],
+        answer:'A',
+        analysis:'顶点式 y = a(x - h)² + k 的顶点为 (h, k)，对照即得。',
+        wrong:'选 B — 把 (x - 2)² 错读成 (x + 2)²'
+      },
+      {
+        idx:3, level:'中等',
+        source:{ file:'八(3)班·第一次月考.pdf', loc:'第 18 题（错率 47%）' },
+        stem:'若二次函数 y = ax² + bx + c 的图像如图所示（开口向下、对称轴在 y 轴右侧、与 y 轴交点在 x 轴上方），则下列结论正确的是（&nbsp;&nbsp;&nbsp;&nbsp;）',
+        options:['A. a &gt; 0, b &gt; 0, c &gt; 0','B. a &lt; 0, b &gt; 0, c &gt; 0','C. a &lt; 0, b &lt; 0, c &gt; 0','D. a &lt; 0, b &gt; 0, c &lt; 0'],
+        answer:'B',
+        analysis:'开口向下 → a &lt; 0；对称轴 x = -b/(2a) &gt; 0，由 a &lt; 0 得 b &gt; 0；与 y 轴交点在 x 轴上方 → c &gt; 0。',
+        wrong:'你班最高错率题 → 多数学生忘了"对称轴位置由 b 与 a 共同决定"'
+      },
+      {
+        idx:4, level:'中等',
+        source:{ file:'2024 杭州中考真题.pdf', loc:'第 15 题（改编）' },
+        stem:'抛物线 y = x² - 4x + 3 与 x 轴的两个交点之间的距离是（&nbsp;&nbsp;&nbsp;&nbsp;）',
+        options:['A. 1','B. 2','C. 3','D. 4'],
+        answer:'B',
+        analysis:'解 x² - 4x + 3 = 0 得 x = 1 或 3，距离 |3 - 1| = 2。',
+        wrong:''
+      }
+    ];
+
+    // 渲染来源 chip 行
+    const sourceChipsHTML = sourceFiles.map(f => `
+      <button class="aexer-src-chip" onclick="openSourceFromArtifact('${f.name}','${f.ext}','${f.path}')" title="点击查看原文：${f.path} › ${f.name}${f.ext}">
+        <i data-lucide="file-text"></i>
+        <span class="aexer-src-name">${f.name}<span class="aexer-src-ext">${f.ext}</span></span>
+      </button>
+    `).join('');
+
+    // 渲染单题
+    const questionsHTML = questions.map(q => `
+      <div class="aexer-q" data-q="${q.idx}">
+        <div class="aexer-q-head">
+          <span class="aexer-q-num">第 ${q.idx} 题</span>
+          <span class="aexer-q-lvl aexer-q-lvl-${q.level==='基础'?'easy':q.level==='中等'?'mid':'hard'}">${q.level}</span>
+          <span class="aexer-q-src" onclick="openSourceFromArtifact('${q.source.file.replace(/\.[^.]+$/,'')}','${(q.source.file.match(/\.[^.]+$/)||[''])[0]}','')" title="改编自：${q.source.file} · ${q.source.loc}">
+            <i data-lucide="bookmark"></i>
+            <span>来自《${q.source.file}》· ${q.source.loc}</span>
+          </span>
+        </div>
+        <div class="aexer-q-body">
+          <p class="aexer-q-stem">${q.stem}</p>
+          <ol class="aexer-q-opts">
+            ${q.options.map(o => '<li>'+o+'</li>').join('')}
+          </ol>
+        </div>
+        <div class="aexer-q-ans">
+          <div class="aexer-ans-row">
+            <span class="aexer-ans-k">答案</span>
+            <span class="aexer-ans-v aexer-ans-bold">${q.answer}</span>
+          </div>
+          <div class="aexer-ans-row">
+            <span class="aexer-ans-k">解析</span>
+            <span class="aexer-ans-v">${q.analysis}</span>
+          </div>
+          ${q.wrong ? `
+          <div class="aexer-ans-row aexer-ans-wrong">
+            <span class="aexer-ans-k"><i data-lucide="alert-triangle"></i>易错</span>
+            <span class="aexer-ans-v">${q.wrong}</span>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <article class="art-exercise-preview">
+
+        <!-- 头部：标题 + 操作 -->
+        <header class="aexer-head">
+          <div class="aexer-head-l">
+            <h1 class="aexer-title">${name}</h1>
+            <div class="aexer-meta">
+              <span><i data-lucide="file-edit"></i>共 10 题 · 含答案与解析</span>
+              <span class="aexer-meta-dot">·</span>
+              <span><i data-lucide="sparkles"></i>AI 已基于你的真题难度生成</span>
+            </div>
+          </div>
+          <div class="aexer-head-r">
+            <button class="aexer-act" onclick="openExerciseEditor()" title="进入题目编辑页 · 改题干 / 换题 / 调整难度">
+              <i data-lucide="pencil"></i><span>编辑</span>
+            </button>
+            <button class="aexer-act primary" onclick="downloadExercise(event)" title="下载题目（含答案 / 不含答案 / 仅题号）">
+              <i data-lucide="download"></i><span>下载</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- 来源条：知识库优势的灵魂 — 这份产物来自老师上传的哪些资料 -->
+        <div class="aexer-sources">
+          <div class="aexer-sources-l">
+            <i data-lucide="library"></i>
+            <span class="aexer-sources-label">来自你的知识库</span>
+          </div>
+          <div class="aexer-sources-files">
+            ${sourceChipsHTML}
+          </div>
+          <div class="aexer-sources-tip" title="不再凭空生成 — 飞象基于老师上传的真题与讲义改编">
+            <i data-lucide="info"></i>
+          </div>
+        </div>
+
+        <!-- 题目列表 -->
+        <div class="aexer-qlist">
+          ${questionsHTML}
+        </div>
+
+        <!-- 兜底说明 -->
+        <div class="aexer-foot">
+          <span>预览展示前 4 题，剩余 6 题已生成 · 下载后可见</span>
+          <span class="aexer-foot-r">${name} · AI 生成于今天</span>
+        </div>
+
+      </article>
+    `;
+  }
+
+  /* 来源 chip 点击：跳到原文件预览（保留对话历史）— 闭环"AI 答案 → 老师原材料" */
+  function openSourceFromArtifact(fname, ext, path){
+    showToast('（演示）打开原文件：' + fname + ext);
+    // 真实场景下应调用：openArtifactInCenter(fname, ext, 'source') 或 navToFile()
+  }
+
+  /* 头部"编辑"按钮：跳转到独立的题目编辑页（demo 不展示该页，仅占位提示）
+     真实场景下应导向：题目逐道编辑 / 换题 / 调整难度 / 重排 / 重新组卷 等完整工作台 */
+  function openExerciseEditor(){
+    showToast('（演示）将打开题目编辑页 · 单独页面承载');
+  }
+
+  /* 下载产物 — 弹简易菜单（demo 用 toast 替代） */
+  function downloadExercise(e){
+    if(e) e.stopPropagation();
+    const btn = e ? e.currentTarget : null;
+    closeAexerDownloadMenu();
+    const menu = document.createElement('div');
+    menu.className = 'aexer-dl-menu';
+    menu.innerHTML = `
+      <div class="aexer-dl-item" onclick="pickDownload('with-answer')">
+        <i data-lucide="file-text"></i>
+        <div class="aexer-dl-text">
+          <div class="aexer-dl-t">含答案与解析</div>
+          <div class="aexer-dl-s">老师备课用 · .docx</div>
+        </div>
+      </div>
+      <div class="aexer-dl-item" onclick="pickDownload('no-answer')">
+        <i data-lucide="file"></i>
+        <div class="aexer-dl-text">
+          <div class="aexer-dl-t">只下载题目</div>
+          <div class="aexer-dl-s">学生用 · .docx</div>
+        </div>
+      </div>
+      <div class="aexer-dl-item" onclick="pickDownload('pdf')">
+        <i data-lucide="printer"></i>
+        <div class="aexer-dl-text">
+          <div class="aexer-dl-t">导出可打印 PDF</div>
+          <div class="aexer-dl-s">直接发到打印店 · .pdf</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(menu);
+    if(btn){
+      const r = btn.getBoundingClientRect();
+      menu.style.top = (r.bottom + 6) + 'px';
+      menu.style.left = Math.max(12, r.right - 220) + 'px';
+    }
+    if(window.lucide) lucide.createIcons();
+    setTimeout(()=>{
+      document.addEventListener('click', closeAexerDownloadMenu, { once:true });
+    }, 0);
+  }
+  function closeAexerDownloadMenu(){
+    document.querySelectorAll('.aexer-dl-menu').forEach(el => el.remove());
+  }
+  function pickDownload(kind){
+    const map = {
+      'with-answer':'✓ 已下载：含答案与解析（.docx）',
+      'no-answer':'✓ 已下载：仅题目版（.docx）',
+      'pdf':'✓ 已生成可打印 PDF'
+    };
+    showToast(map[kind] || '✓ 已下载');
+    closeAexerDownloadMenu();
   }
 
   /* 内部 helper：只清"在回顾对话"的状态（右栏恢复主对话 / 副标题恢复 / 高亮清除）
@@ -1266,7 +1471,10 @@
         const noteName = prompt('笔记名', '新笔记');
         if(noteName) showToast(`✓ 已创建笔记「${noteName}」（演示）`);
         break;
-      // v3.5 入口收敛：右键「导入到这里」UI 已删，case 顺手清理
+      case 'uploadHere':
+        showToast(`上传到「${name}」`);
+        openUploadWindow();
+        break;
       case 'rename': {
         const newName = prompt('新名称', name);
         if(newName && target){

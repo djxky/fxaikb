@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>飞象 AI · 日常工作台</title>
 <script src="https://unpkg.com/lucide@latest" defer onload="window.renderLucideIcons ? window.renderLucideIcons() : (window.lucide && lucide.createIcons())"></script>
-<link rel="stylesheet" href="kb-workbench.css?v=202605072008" />
+<link rel="stylesheet" href="kb-workbench.css?v=202605072156" />
 </head>
 <body data-page="workbench" data-scene="daily">
 <!-- ============ 顶栏（极简：折叠按钮 / 品牌 / 搜索 / 添加 / 折叠按钮）============
@@ -1024,6 +1024,9 @@
     <div class="ctx-item" onclick="ctxAction('newFolder')">
       <i data-lucide="folder-plus"></i>新建子文件夹
     </div>
+    <div class="ctx-item" onclick="ctxAction('uploadHere')">
+      <i data-lucide="upload"></i>上传到此文件夹
+    </div>
     <div class="ctx-item" onclick="ctxAction('newNote')">
       <i data-lucide="file-plus"></i>新建笔记
     </div>
@@ -1102,8 +1105,8 @@
     </div>
   </div>
 </div>
-<script src="kb-workbench.js?v=202605072008"></script>
-<script src="kb-page-router.js?v=202605072008"></script>
+<script src="kb-workbench.js?v=202605072156"></script>
+<script src="kb-page-router.js?v=202605072156"></script>
 
 </body>
 </html>
