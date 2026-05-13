@@ -96,7 +96,9 @@
             .eq('page_key', PAGE_KEY)
             .order('created_at', { ascending: true });
         if (error) throw error;
-        return (data || []).map(toPin);
+        return (data || [])
+            .map(toPin)
+            .filter(pin => pin.comments.length > 0);
     }
 
     async function refreshFromCloud(quiet) {
