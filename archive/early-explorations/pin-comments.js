@@ -208,6 +208,9 @@
     let filterStatus = 'all';
     let realtimeChannel = null;
     let refreshTimer = null;
+    let hoverTarget = null;
+    let pinsHidden = false;
+    let activeDraft = null;
 
     // ============= 样式注入 =============
     const css = `
@@ -219,14 +222,15 @@
     .pc-fab-mini{width:36px;height:36px;border-radius:50%;background:#fff;color:#111;border:1px solid #E5E7EB;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px -4px rgba(0,0,0,0.15);font-size:14px}
     .pc-fab-mini:hover{border-color:#2563EB;color:#2563EB}
 
-    body.pc-mode-on *:not(.pc-ui):not(.pc-ui *):hover{outline:2px dashed rgba(37,99,235,.55) !important;outline-offset:2px;cursor:crosshair !important}
-    body.pc-mode-on{user-select:none}
+    body.pc-mode-on{user-select:none;cursor:crosshair}
+    body.pc-mode-on .pc-hover-target{outline:2px dashed rgba(37,99,235,.55) !important;outline-offset:2px;cursor:crosshair !important}
 
     .pc-pin{position:absolute;width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#2563EB;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;cursor:pointer;box-shadow:0 4px 12px -2px rgba(0,0,0,0.25);z-index:99990;transition:transform .15s ease, box-shadow .15s ease;border:2px solid #fff}
     .pc-pin span{transform:rotate(45deg);display:block;line-height:1}
     .pc-pin:hover{transform:rotate(-45deg) scale(1.1)}
     .pc-pin.flash{animation:pcFlash 1.2s ease-out}
     .pc-pin.fixed-pos{position:fixed}
+    .pc-pin.draft{background:#111827;border-color:#FCD34D;opacity:.95}
     @keyframes pcFlash{0%,100%{box-shadow:0 4px 12px -2px rgba(0,0,0,0.25)}50%{box-shadow:0 0 0 8px rgba(37,99,235,0.35), 0 4px 12px -2px rgba(0,0,0,0.25)}}
 
     .pc-card{position:absolute;width:320px;background:#fff;border-radius:14px;border:1px solid #E5E7EB;box-shadow:0 20px 50px -12px rgba(0,0,0,0.25);z-index:99995;overflow:hidden;font-size:13px;color:#1F2937}
@@ -294,7 +298,7 @@
     `;
 
     // ============= UI 创建 =============
-    let fabBtn, drawerEl, maskEl, pinLayer;
+    let fabBtn, pinToggleBtn, drawerEl, maskEl, pinLayer;
 
     function injectStyle() {
         const s = document.createElement('style');
@@ -313,12 +317,17 @@
         list.innerHTML = '☰';
         list.onclick = () => toggleDrawer(true);
 
+        pinToggleBtn = document.createElement('button');
+        pinToggleBtn.className = 'pc-fab-mini pc-ui';
+        pinToggleBtn.onclick = togglePinsHidden;
+
         fabBtn = document.createElement('button');
         fabBtn.className = 'pc-fab pc-ui';
         fabBtn.innerHTML = `<span>💬 评论</span><span class="pc-badge">${pins.length}</span>`;
         fabBtn.onclick = toggleCommentMode;
 
         wrap.appendChild(list);
+        wrap.appendChild(pinToggleBtn);
         wrap.appendChild(fabBtn);
         document.body.appendChild(wrap);
     }
@@ -328,6 +337,11 @@
         const open = pins.filter(p => p.status === 'todo').length;
         fabBtn.innerHTML = `<span>${isCommentMode ? '✕ 退出评论' : '💬 评论'}</span><span class="pc-badge">${open}/${pins.length}</span>`;
         fabBtn.classList.toggle('on', isCommentMode);
+        if (pinToggleBtn) {
+            pinToggleBtn.title = pinsHidden ? '显示页面 Pin' : '隐藏页面 Pin';
+            pinToggleBtn.innerHTML = pinsHidden ? '◎' : '◉';
+            pinToggleBtn.style.color = pinsHidden ? '#9CA3AF' : '#2563EB';
+        }
     }
 
     function createPinLayer() {
@@ -350,6 +364,10 @@
         renderPins();
         refreshFab();
         if (drawerOpen) renderDrawer();
+        if (pinsHidden && activePinId) {
+            closeActiveCard();
+            return;
+        }
         if (activePinId && activeCard) {
             const pin = pins.find(p => p.id === activePinId);
             if (pin) {
@@ -360,6 +378,14 @@
                 closeActiveCard();
             }
         }
+    }
+
+    function togglePinsHidden() {
+        pinsHidden = !pinsHidden;
+        if (pinsHidden) closeActiveCard();
+        renderPins();
+        refreshFab();
+        showToast(pinsHidden ? '已隐藏页面 Pin，评论清单仍可查看' : '已显示页面 Pin');
     }
 
     // ============= 昵称弹窗 =============
@@ -407,10 +433,26 @@
         } else {
             isCommentMode = false;
             document.body.classList.remove('pc-mode-on');
+            setHoverTarget(null);
             refreshFab();
             closeActiveCard();
         }
     }
+
+    function setHoverTarget(el) {
+        if (hoverTarget === el) return;
+        if (hoverTarget) hoverTarget.classList.remove('pc-hover-target');
+        hoverTarget = el;
+        if (hoverTarget) hoverTarget.classList.add('pc-hover-target');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        if (!isCommentMode || e.target.closest('.pc-ui')) {
+            setHoverTarget(null);
+            return;
+        }
+        setHoverTarget(e.target);
+    }, true);
 
     // ============= 落 Pin =============
     document.addEventListener('click', async (e) => {
@@ -439,15 +481,7 @@
             createdBy: getNick(),
             comments: []
         };
-        try {
-            const savedPin = await insertPin(pin);
-            if (!pins.some(p => p.id === savedPin.id)) pins.push(savedPin);
-            refreshAllUi();
-            openCard(savedPin.id, true);
-        } catch (err) {
-            console.error('[pin-comments] create pin failed', err);
-            showToast('落 Pin 失败，请检查网络或 Supabase 权限');
-        }
+        openDraftCard(pin, true);
     }, true);
 
     function isFixedAncestor(el) {
@@ -464,7 +498,9 @@
     function renderPins() {
         if (!pinLayer) return;
         pinLayer.innerHTML = '';
-        pins.forEach((p, i) => {
+        if (pinsHidden && !activeDraft) return;
+        const frag = document.createDocumentFragment();
+        if (!pinsHidden) pins.forEach((p, i) => {
             const el = findEl(p.selector);
             if (!el) return;
             const rect = el.getBoundingClientRect();
@@ -492,18 +528,129 @@
                 e.stopPropagation();
                 openCard(p.id);
             };
-            pinLayer.appendChild(pinEl);
+            frag.appendChild(pinEl);
         });
+        if (activeDraft && activeDraft.pinEl) frag.appendChild(activeDraft.pinEl);
+        pinLayer.appendChild(frag);
     }
 
     // ============= 评论卡片 =============
     let activeCard = null;
     function closeActiveCard() {
         if (activeCard) { activeCard.remove(); activeCard = null; activePinId = null; }
+        if (activeDraft && activeDraft.pinEl) activeDraft.pinEl.remove();
+        activeDraft = null;
+    }
+
+    function createPinElement(pin, label, isDraft) {
+        const el = findEl(pin.selector);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        const pinEl = document.createElement('div');
+        pinEl.className = 'pc-pin pc-ui' + (pin.isFixed ? ' fixed-pos' : '') + (isDraft ? ' draft' : '');
+        pinEl.dataset.id = pin.id;
+        pinEl.innerHTML = `<span>${label}</span>`;
+        pinEl.style.pointerEvents = 'auto';
+
+        const localX = pin.xPct * rect.width;
+        const localY = pin.yPct * rect.height;
+        if (pin.isFixed) {
+            pinEl.style.left = (rect.left + localX - 13) + 'px';
+            pinEl.style.top = (rect.top + localY - 26) + 'px';
+        } else {
+            const absX = rect.left + window.scrollX + localX;
+            const absY = rect.top + window.scrollY + localY;
+            pinEl.style.left = (absX - 13) + 'px';
+            pinEl.style.top = (absY - 26) + 'px';
+        }
+        return pinEl;
+    }
+
+    function openDraftCard(pin, autoFocus) {
+        closeActiveCard();
+        const pinEl = createPinElement(pin, '+', true);
+        if (!pinEl) return;
+        pinEl.onclick = (e) => {
+            e.stopPropagation();
+            if (activeDraft && activeDraft.card) activeDraft.card.querySelector('textarea').focus();
+        };
+        pinLayer.appendChild(pinEl);
+
+        const card = document.createElement('div');
+        card.className = 'pc-card pc-ui' + (pin.isFixed ? ' fixed-pos' : '');
+        renderDraftCard(card, pin);
+        document.body.appendChild(card);
+        positionCard(card, pinEl, pin.isFixed);
+        activeCard = card;
+        activeDraft = { pin, pinEl, card };
+        if (autoFocus) {
+            const ta = card.querySelector('textarea');
+            if (ta) ta.focus();
+        }
+    }
+
+    function renderDraftCard(card, pin) {
+        card.innerHTML = `
+            <div class="pc-card-head">
+                <button class="pc-status-pill" style="background:#FEF3C7;color:#92400E" disabled>
+                    草稿 · 发送后创建
+                </button>
+                <div style="font-size:11px;color:#9CA3AF">未发布</div>
+                <button class="pc-close" data-act="close">✕</button>
+            </div>
+            <div class="pc-card-body">
+                <div style="padding:8px 0;color:#6B7280;font-size:12px;text-align:center">写完并发送后，其他人才会看到这条 Pin。</div>
+            </div>
+            <div class="pc-card-input">
+                <textarea rows="2" placeholder="写评论… (⌘/Ctrl + Enter 发送)" maxlength="500"></textarea>
+                <div class="pc-actions">
+                    <button class="pc-btn pc-btn-ghost" data-act="cancel">取消</button>
+                    <button class="pc-btn pc-btn-primary" data-act="send" disabled>发送</button>
+                </div>
+            </div>
+        `;
+
+        const ta = card.querySelector('textarea');
+        const send = card.querySelector('[data-act="send"]');
+        ta.oninput = () => { send.disabled = !ta.value.trim(); };
+        ta.onkeydown = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); }
+        };
+        const doSend = async () => {
+            const v = ta.value.trim();
+            if (!v) return;
+            send.disabled = true;
+            let savedPin = null;
+            try {
+                savedPin = await insertPin(pin);
+                const msg = await insertComment(savedPin.id, v);
+                savedPin.comments.push(msg);
+                if (!pins.some(p => p.id === savedPin.id)) pins.push(savedPin);
+                closeActiveCard();
+                pinsHidden = false;
+                refreshAllUi();
+                openCard(savedPin.id);
+            } catch (err) {
+                if (savedPin) {
+                    try { await deletePin(savedPin.id); } catch (cleanupErr) { console.warn('[pin-comments] cleanup draft pin failed', cleanupErr); }
+                }
+                console.error('[pin-comments] create draft failed', err);
+                showToast('评论发送失败，请稍后重试');
+                send.disabled = false;
+            }
+        };
+        send.onclick = doSend;
+        card.querySelector('[data-act="cancel"]').onclick = closeActiveCard;
+        card.querySelector('[data-act="close"]').onclick = closeActiveCard;
     }
 
     function openCard(pinId, autoFocus) {
         closeActiveCard();
+        if (pinsHidden) {
+            pinsHidden = false;
+            renderPins();
+            refreshFab();
+        }
         const pin = pins.find(p => p.id === pinId);
         if (!pin) return;
         const pinEl = pinLayer.querySelector(`[data-id="${pinId}"]`);
@@ -822,6 +969,9 @@
                     const pin = pins.find(p => p.id === activePinId);
                     const pinEl = pinLayer.querySelector(`[data-id="${activePinId}"]`);
                     if (pin && pinEl && activeCard) positionCard(activeCard, pinEl, pin.isFixed);
+                }
+                if (activeDraft && activeDraft.pinEl && activeDraft.card) {
+                    positionCard(activeDraft.card, activeDraft.pinEl, activeDraft.pin.isFixed);
                 }
             });
         };
