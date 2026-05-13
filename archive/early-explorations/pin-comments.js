@@ -211,7 +211,7 @@
 
     // ============= 样式注入 =============
     const css = `
-    .pc-fab-wrap{position:fixed;right:20px;bottom:20px;z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+    .pc-fab-wrap{position:fixed;right:20px;bottom:76px;z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
     .pc-fab{display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;font-size:13px;font-weight:500;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,0.3);border:none;transition:transform .15s ease, background .15s ease}
     .pc-fab:hover{transform:translateY(-1px)}
     .pc-fab.on{background:#2563EB}
@@ -281,7 +281,7 @@
     .pc-drawer-foot .pc-nick{font-size:11px;color:#6B7280}
     .pc-drawer-foot .pc-nick b{color:#111827;font-weight:600}
 
-    .pc-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:99999;opacity:0;transition:opacity .2s, transform .2s;pointer-events:none}
+    .pc-toast{position:fixed;bottom:136px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:99999;opacity:0;transition:opacity .2s, transform .2s;pointer-events:none}
     .pc-toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
 
     .pc-modal-mask{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99998;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
