@@ -1,23 +1,38 @@
 /**
- * pin-comments.js — 飞象 AI demo 评论层 (v0.2, Supabase 多人同步)
+ * pin-comments.js — 多人评论层 (v0.3, Supabase + projectKey)
  *
  * 用途：在任意 HTML demo 页面以一行 <script> 引入，即可获得「在画布上贴 Pin 评论」的能力。
  * 数据：评论数据存于 Supabase；localStorage 仅保存当前浏览器昵称。
  *
+ * 配置：在引入本脚本前定义 window.PIN_COMMENTS = { url, anonKey, projectKey, pageKey? }
+ *   - url:        Supabase Project URL，必填
+ *   - anonKey:    Supabase anon public key，必填
+ *   - projectKey: 项目隔离键，必填。同一项目所有页面共享一个值，例如 'feixiang-ai'
+ *   - pageKey:    页面隔离键，可选。默认 location.pathname 规整后的值
+ *
  * 交互：
- *   - 右下角浮动按钮：开/关「评论模式」、打开「评论列表抽屉」
- *   - 评论模式 ON：元素 hover 高亮 + 点击落 Pin
+ *   - 右下角浮动按钮：开/关「评论模式」、打开「评论列表抽屉」、隐藏/显示已有 Pin
+ *   - 评论模式 ON：元素 hover 高亮 + 点击创建草稿 Pin（点发送才落库）
  *   - Pin：点击展开评论卡片，可回复、改状态（待修改/已修改/已确认/不做）
  *   - 抽屉：按状态筛选、点击跳转、一键导出 Markdown
  */
 (function () {
     'use strict';
 
-    // ============= 常量 & 工具 =============
-    const PAGE_KEY = location.pathname.replace(/\/+/g, '/').replace(/\/$/, '') || 'index';
+    // ============= 配置 & 常量 =============
+    // 兼容旧名 PIN_COMMENTS_SUPABASE，但优先使用 PIN_COMMENTS
+    const CONFIG = window.PIN_COMMENTS || window.PIN_COMMENTS_SUPABASE || {};
+    const PROJECT_KEY = (CONFIG.projectKey || '').trim();
+    const PAGE_KEY = (CONFIG.pageKey && String(CONFIG.pageKey).trim())
+        || location.pathname.replace(/\/+/g, '/').replace(/\/$/, '')
+        || 'index';
     const NICK_KEY = 'pc::nickname';
-    const CONFIG = window.PIN_COMMENTS_SUPABASE || {};
-    const supabaseClient = window.supabase && CONFIG.url && CONFIG.anonKey
+
+    if (!PROJECT_KEY) {
+        console.warn('[pin-comments] 缺少 projectKey，多人评论已禁用。请在引入脚本前设置 window.PIN_COMMENTS = { url, anonKey, projectKey }');
+    }
+
+    const supabaseClient = (window.supabase && CONFIG.url && CONFIG.anonKey && PROJECT_KEY)
         ? window.supabase.createClient(CONFIG.url, CONFIG.anonKey)
         : null;
 
@@ -93,6 +108,7 @@
         const { data, error } = await supabaseClient
             .from('comment_pins')
             .select('id, selector, x_pct, y_pct, is_fixed, status, created_at, created_by, comment_messages(id, author, body, created_at)')
+            .eq('project_key', PROJECT_KEY)
             .eq('page_key', PAGE_KEY)
             .order('created_at', { ascending: true });
         if (error) throw error;
@@ -122,19 +138,21 @@
 
     function setupRealtime() {
         if (!isCloudReady() || realtimeChannel) return;
+        // Supabase Realtime filter 只支持单字段匹配，所以服务端按 project_key 过滤，
+        // page_key 在 scheduleCloudRefresh 触发的 fetchPins 里再次过滤
         realtimeChannel = supabaseClient
-            .channel(`pin-comments:${PAGE_KEY}`)
+            .channel(`pin-comments:${PROJECT_KEY}:${PAGE_KEY}`)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'comment_pins',
-                filter: `page_key=eq.${PAGE_KEY}`
+                filter: `project_key=eq.${PROJECT_KEY}`
             }, scheduleCloudRefresh)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'comment_messages',
-                filter: `page_key=eq.${PAGE_KEY}`
+                filter: `project_key=eq.${PROJECT_KEY}`
             }, scheduleCloudRefresh)
             .subscribe(status => {
                 if (status === 'CHANNEL_ERROR') {
@@ -148,6 +166,7 @@
             .from('comment_pins')
             .insert({
                 id: pin.id,
+                project_key: PROJECT_KEY,
                 page_key: PAGE_KEY,
                 selector: pin.selector,
                 x_pct: pin.xPct,
@@ -167,6 +186,7 @@
             .from('comment_messages')
             .insert({
                 pin_id: pinId,
+                project_key: PROJECT_KEY,
                 page_key: PAGE_KEY,
                 author: getNick(),
                 body
@@ -182,6 +202,7 @@
             .from('comment_pins')
             .update({ status })
             .eq('id', pinId)
+            .eq('project_key', PROJECT_KEY)
             .eq('page_key', PAGE_KEY);
         if (error) throw error;
     }
@@ -191,6 +212,7 @@
             .from('comment_pins')
             .delete()
             .eq('id', pinId)
+            .eq('project_key', PROJECT_KEY)
             .eq('page_key', PAGE_KEY);
         if (error) throw error;
     }

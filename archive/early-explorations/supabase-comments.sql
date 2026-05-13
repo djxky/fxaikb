@@ -1,12 +1,16 @@
--- Supabase schema for the shared Pin comments demo.
--- Run this in Supabase SQL Editor, then enable Realtime for both tables
--- from Database > Replication if your project does not apply the publication
--- statements below automatically.
+-- pin-comments · Supabase schema (v0.3, with project_key)
+-- 在 Supabase SQL Editor 执行一次即可。同一 Supabase 项目可承载多个 demo
+-- （按 project_key 隔离），免费额度通常足够。
+--
+-- 如果你的 Supabase 已经跑过老版本（无 project_key），改用 migrate-add-project-key.sql
 
 create extension if not exists pgcrypto;
 
+-- ============= 表结构 =============
+
 create table if not exists public.comment_pins (
   id text primary key,
+  project_key text not null,
   page_key text not null,
   selector text not null,
   x_pct double precision not null check (x_pct >= 0 and x_pct <= 1),
@@ -21,17 +25,28 @@ create table if not exists public.comment_pins (
 create table if not exists public.comment_messages (
   id uuid primary key default gen_random_uuid(),
   pin_id text not null references public.comment_pins(id) on delete cascade,
+  project_key text not null,
   page_key text not null,
   author text not null,
   body text not null check (char_length(body) <= 500),
   created_at timestamptz not null default now()
 );
 
-create index if not exists comment_pins_page_key_created_at_idx
-  on public.comment_pins (page_key, created_at);
+-- ============= 索引 =============
+
+create index if not exists comment_pins_project_page_idx
+  on public.comment_pins (project_key, page_key, created_at);
+
+create index if not exists comment_pins_project_idx
+  on public.comment_pins (project_key);
+
+create index if not exists comment_messages_project_page_idx
+  on public.comment_messages (project_key, page_key, created_at);
 
 create index if not exists comment_messages_pin_id_created_at_idx
   on public.comment_messages (pin_id, created_at);
+
+-- ============= updated_at 触发器 =============
 
 create or replace function public.set_comment_pin_updated_at()
 returns trigger
@@ -47,6 +62,10 @@ drop trigger if exists set_comment_pin_updated_at on public.comment_pins;
 create trigger set_comment_pin_updated_at
 before update on public.comment_pins
 for each row execute function public.set_comment_pin_updated_at();
+
+-- ============= RLS =============
+-- 注意：当前策略允许任何匿名用户 select/insert/update/delete
+-- 适合评审型 demo，不适合生产数据。需要更严格控制时见 SUPABASE_SETUP.md
 
 alter table public.comment_pins enable row level security;
 alter table public.comment_messages enable row level security;
@@ -65,7 +84,9 @@ create policy "anon can insert comment pins"
 on public.comment_pins for insert
 to anon
 with check (
-  length(trim(created_by)) between 1 and 40
+  length(trim(project_key)) between 1 and 80
+  and length(trim(page_key)) between 1 and 200
+  and length(trim(created_by)) between 1 and 40
   and length(trim(selector)) > 0
 );
 
@@ -93,7 +114,9 @@ create policy "anon can insert comment messages"
 on public.comment_messages for insert
 to anon
 with check (
-  length(trim(author)) between 1 and 40
+  length(trim(project_key)) between 1 and 80
+  and length(trim(page_key)) between 1 and 200
+  and length(trim(author)) between 1 and 40
   and length(trim(body)) between 1 and 500
 );
 
@@ -102,6 +125,8 @@ create policy "anon can delete comment messages"
 on public.comment_messages for delete
 to anon
 using (true);
+
+-- ============= Realtime 发布 =============
 
 do $$
 begin
