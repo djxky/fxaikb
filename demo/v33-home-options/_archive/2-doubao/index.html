@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞象 AI · 方案 2 · 顶部入口 + 底部对话</title>
+<style>
+  :root{
+    --bg:#f6f3ed;
+    --side:#f1eee7;
+    --surface:#fffefa;
+    --surface-2:#fbfaf6;
+    --ink:#1f1f1d;
+    --muted:#77716a;
+    --faint:#aaa39a;
+    --line:#e6e0d6;
+    --line-strong:#d5cab8;
+    --gold:#a87e2c;
+    --gold-soft:#f3ead7;
+    --green:#537260;
+    --blue:#64758f;
+    --shadow:0 22px 52px -36px rgba(45,38,27,.42);
+    --card-shadow:0 12px 28px -22px rgba(45,38,27,.25);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Source Han Sans SC","Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);color:var(--ink);
+    font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  button,textarea{font:inherit}
+  button{border:0;background:none;color:inherit;cursor:pointer}
+
+  .app{
+    height:100vh;
+    display:grid;grid-template-columns:248px minmax(0,1fr);overflow:hidden;
+  }
+
+  /* 侧栏 v29 风格 */
+  .sidebar{
+    min-width:0;background:var(--side);
+    border-right:1px solid var(--line);
+    display:flex;flex-direction:column;padding:14px 10px;
+  }
+  .brand{display:flex;align-items:center;gap:9px;padding:7px 8px 18px;font-weight:650}
+  .brand-mark{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:var(--ink);color:#fffefa;font-size:12px}
+  .brand-sub{color:var(--muted);font-size:12px;font-weight:500;margin-left:auto}
+  .new-chat{
+    height:36px;display:flex;align-items:center;gap:9px;
+    padding:0 10px;border-radius:8px;
+    background:var(--ink);color:#fffefa;font-weight:560;
+    margin:0 2px 12px;
+  }
+  .nav-section{margin-top:8px}
+  .nav-title{padding:8px 9px 5px;font-size:11px;color:var(--faint);font-weight:650}
+  .nav-item{
+    width:100%;min-height:34px;
+    display:flex;align-items:center;gap:9px;
+    padding:7px 9px;border-radius:7px;
+    color:#45413c;font-size:13px;text-align:left;
+  }
+  .nav-item:hover{background:#e9e4db}
+  .nav-item.active{background:#ebe2d0;color:var(--ink);font-weight:600}
+  .nav-item svg{flex:0 0 auto;color:#807970}
+  .nav-item.active svg{color:var(--gold)}
+  .nav-count{margin-left:auto;color:var(--faint);font-size:11px}
+  .side-spacer{flex:1}
+  .school-chip{
+    margin:8px 2px 10px;padding:10px;
+    border:1px solid var(--line);border-radius:10px;
+    background:rgba(255,255,255,.38);
+  }
+  .school-name{font-size:13px;font-weight:620}
+  .school-meta{margin-top:2px;color:var(--muted);font-size:12px}
+  .user{
+    border-top:1px solid var(--line);
+    padding:11px 8px 2px;
+    display:flex;align-items:center;gap:9px;
+  }
+  .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#d9d1c2;color:#554d43;font-weight:650}
+  .user-name{font-size:13px;font-weight:560}
+  .user-role{font-size:11px;color:var(--muted);margin-top:1px}
+
+  /* 主区 */
+  .main{
+    min-width:0;height:100vh;overflow:auto;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 180px),
+      var(--bg);
+  }
+  .topbar{
+    height:58px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;border-bottom:1px solid rgba(230,224,214,.7);
+  }
+  .crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+  .crumb strong{color:var(--ink);font-weight:620}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--muted)}
+  .icon-btn:hover{background:#ece7dd;color:var(--ink)}
+  .quota{height:30px;display:inline-flex;align-items:center;gap:7px;padding:0 10px;border-radius:8px;background:rgba(255,255,255,.54);border:1px solid var(--line);color:var(--muted);font-size:12px}
+  .quota-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+  .stage{
+    width:min(1080px,calc(100% - 56px));
+    margin:42px auto 60px;
+  }
+  .hero-row{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    margin-bottom:18px;
+  }
+  h1{margin:0;font-size:26px;font-weight:580;line-height:1.28}
+  .hero-sub{margin-top:4px;color:var(--muted);font-size:13px}
+
+  /* 方案 2 核心：常用应用直接铺出来（C 类承接），不是抽象的"使用应用"卡 */
+  .entry-section{margin-bottom:26px}
+  .section-label{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .section-title{
+    display:flex;align-items:center;gap:8px;
+    font-size:14px;font-weight:620;color:var(--ink);
+    letter-spacing:-.005em;
+  }
+  .section-title .section-emoji{
+    width:22px;height:22px;border-radius:6px;
+    display:grid;place-items:center;
+    background:var(--gold-soft);color:var(--gold);
+  }
+  .section-title .section-emoji.green{background:#e6efe7;color:var(--green)}
+  .section-title .section-emoji.blue{background:#e5ebf3;color:var(--blue)}
+  .section-title .section-emoji.purple{background:#ece5ef;color:#7c5b8a}
+  .section-note{color:var(--muted);font-weight:400;font-size:12.5px;margin-left:6px}
+  .section-link{
+    color:var(--muted);font-size:12.5px;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .section-link:hover{color:var(--ink)}
+
+  .entry-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+  }
+  .entry-card{
+    background:var(--surface);
+    border:1px solid rgba(230,224,214,.7);
+    border-radius:13px;
+    padding:14px 14px 13px;
+    text-align:left;
+    transition:all .2s ease;
+    box-shadow:0 1px 3px rgba(45,38,27,.04);
+    display:flex;flex-direction:column;gap:6px;
+    min-height:108px;
+  }
+  .entry-card:hover{
+    border-color:#cbbb9d;
+    transform:translateY(-2px);
+    box-shadow:0 14px 28px -20px rgba(45,38,27,.25);
+  }
+  .entry-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:2px;
+  }
+  .entry-icon{
+    width:32px;height:32px;border-radius:8px;
+    display:grid;place-items:center;
+    background:var(--gold-soft);color:var(--gold);
+  }
+  .entry-icon.green{background:#e6efe7;color:var(--green)}
+  .entry-icon.blue{background:#e5ebf3;color:var(--blue)}
+  .entry-icon.purple{background:#ece5ef;color:#7c5b8a}
+  .entry-icon.rose{background:#f3e2e4;color:#a86a72}
+  .entry-status{
+    font-size:11px;font-weight:560;letter-spacing:.2px;
+    padding:2px 7px;border-radius:99px;
+    background:#f1eee7;color:#7a7268;
+  }
+  .entry-status.warn{background:#f3e3cf;color:#b97b3a}
+  .entry-status.ok{background:#e6efe7;color:var(--green)}
+  .entry-title{font-size:14.5px;font-weight:620;color:var(--ink);letter-spacing:-.005em}
+  .entry-desc{font-size:12px;color:var(--muted);line-height:1.45}
+
+  /* 创建应用卡：虚线 */
+  .entry-card.create{
+    border-style:dashed;background:transparent;
+    align-items:center;justify-content:center;text-align:center;
+    box-shadow:none;
+  }
+  .entry-card.create:hover{
+    border-color:#aaa39a;background:rgba(255,254,250,.4);
+    box-shadow:none;transform:translateY(-1px);
+  }
+  .entry-card.create .entry-icon{
+    background:transparent;border:1px dashed #aaa39a;color:var(--muted);
+  }
+  .entry-card.create .entry-title{color:var(--muted)}
+
+  /* 底部对话框区域 */
+  .compose-area{
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  textarea{
+    width:100%;min-height:88px;
+    padding:18px 18px 8px;
+    border:0;resize:none;outline:0;background:transparent;
+    color:var(--ink);font-size:15.5px;line-height:1.55;
+  }
+  textarea::placeholder{color:#aaa299}
+  .composer-footer{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;border-top:1px solid #f0ece4;padding:10px 12px;
+  }
+  .composer-tools{display:flex;align-items:center;gap:4px}
+  .tool-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:var(--muted)}
+  .tool-btn:hover{background:#f1eee7;color:var(--ink)}
+  .reference-note{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 8px;color:var(--muted);font-size:12px}
+  .reference-note svg{color:var(--gold)}
+  .send{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;color:#fffefa;background:var(--ink)}
+
+  .quick-row{
+    display:flex;gap:8px;flex-wrap:wrap;
+    margin-top:14px;align-items:center;
+  }
+  .quick-kicker{color:var(--muted);font-size:12px;margin-right:2px}
+  .quick{
+    min-height:32px;
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 11px;
+    border:1px solid var(--line);border-radius:10px;
+    background:rgba(255,255,255,.5);
+    color:#48433d;font-size:13px;
+  }
+  .quick:hover{border-color:#cbbb9d;background:#fffefa}
+  .quick svg{color:var(--gold)}
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;
+    transform:translate(-50%,18px);opacity:0;pointer-events:none;
+    min-width:220px;max-width:min(420px,calc(100vw - 32px));
+    padding:10px 14px;border-radius:10px;background:#24211d;color:#fffefa;
+    box-shadow:0 18px 38px -24px rgba(0,0,0,.6);
+    transition:opacity .18s ease, transform .18s ease;
+    font-size:13px;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:1100px){
+    .entry-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (max-width:860px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .topbar{padding:0 18px}
+    .quota{display:none}
+    .stage{width:calc(100% - 32px);margin:28px auto 40px}
+    h1{font-size:23px}
+    .entry-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">飞</span>
+      <span>飞象 AI</span>
+      <span class="brand-sub">学校版</span>
+    </div>
+
+    <button class="new-chat" data-toast="已新建对话">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      新对话
+    </button>
+
+    <button class="nav-item" data-toast="历史对话">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      历史对话
+      <span class="nav-count">86</span>
+    </button>
+
+    <div class="nav-section">
+      <div class="nav-title">知识库</div>
+      <button class="nav-item" data-toast="我的知识库">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><circle cx="12" cy="7" r="4"/></svg>
+        我的知识库
+      </button>
+      <button class="nav-item" data-toast="实验中学知识库">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        学校知识库
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-title">常用</div>
+      <button class="nav-item" data-toast="我的班级">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        我的班级
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-title">应用</div>
+      <button class="nav-item" data-toast="官方应用">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        官方应用 <span class="nav-count">3</span>
+      </button>
+      <button class="nav-item" data-toast="校本应用">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        校本应用 <span class="nav-count">8</span>
+      </button>
+    </div>
+
+    <div class="side-spacer"></div>
+
+    <div class="school-chip">
+      <div class="school-name">实验中学</div>
+      <div class="school-meta">认可的内容可保存到知识库</div>
+    </div>
+
+    <div class="user">
+      <div class="avatar">张</div>
+      <div>
+        <div class="user-name">张老师</div>
+        <div class="user-role">高一语文 · 学科老师</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">
+        <strong>实验中学</strong>
+        <span>/</span>
+        <span>飞象 AI</span>
+        <span style="color:var(--faint);margin:0 4px">·</span>
+        <span style="color:var(--muted)">方案 2 · 顶部入口 + 底部对话</span>
+      </div>
+      <div class="top-actions">
+        <div class="quota"><span class="quota-dot"></span>本月算力正常</div>
+        <button class="icon-btn" title="通知" data-toast="暂无新通知">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <button class="icon-btn" title="设置" data-toast="设置">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1h.38a2 2 0 1 1 0 4h-.09c-.36 0-.69.08-1 .22z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="stage">
+      <div class="hero-row">
+        <div>
+          <h1>下午好，张老师</h1>
+          <div class="hero-sub">直接打开常用的工具，或者告诉飞象你想做什么。</div>
+        </div>
+      </div>
+
+      <!-- 教学应用（官方）：覆盖老师高频教学场景 -->
+      <div class="entry-section">
+        <div class="section-label">
+          <div class="section-title">
+            <span class="section-emoji green"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+            教学应用
+            <span class="section-note">官方 · 常用</span>
+          </div>
+          <a class="section-link" href="#" data-toast="进入官方应用中心">全部官方应用 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></a>
+        </div>
+
+        <div class="entry-grid">
+          <button class="entry-card" data-toast="打开备课助手">
+            <div class="entry-head">
+              <div class="entry-icon green"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+              <span class="entry-status">本周 3 次</span>
+            </div>
+            <div class="entry-title">备课助手</div>
+            <div class="entry-desc">备明天的课 · 自动调用学校知识库</div>
+          </button>
+
+          <button class="entry-card" data-toast="打开作业批改">
+            <div class="entry-head">
+              <div class="entry-icon green"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+              <span class="entry-status">本月 32 次</span>
+            </div>
+            <div class="entry-title">作业批改</div>
+            <div class="entry-desc">一键批改 + 错因分析 + 讲评提纲</div>
+          </button>
+
+          <button class="entry-card" data-toast="打开作文学情">
+            <div class="entry-head">
+              <div class="entry-icon blue"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+              <span class="entry-status">本月 18 次</span>
+            </div>
+            <div class="entry-title">作文学情</div>
+            <div class="entry-desc">布置作文 · 批改 · 班级写作画像</div>
+          </button>
+
+          <button class="entry-card" data-toast="打开学生画像">
+            <div class="entry-head">
+              <div class="entry-icon purple"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+              <span class="entry-status warn">3 人需关注</span>
+            </div>
+            <div class="entry-title">学生画像</div>
+            <div class="entry-desc">单个学生跟踪 · 长期成长档案</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 班级应用（校本）：班主任 + 班级事务 -->
+      <div class="entry-section">
+        <div class="section-label">
+          <div class="section-title">
+            <span class="section-emoji"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+            班级应用
+            <span class="section-note">校本 · 实验中学定制</span>
+          </div>
+          <a class="section-link" href="#" data-toast="进入校本应用中心">全部校本应用 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></a>
+        </div>
+
+        <div class="entry-grid">
+          <button class="entry-card" data-toast="打开通知回执">
+            <div class="entry-head">
+              <div class="entry-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+              <span class="entry-status warn">5 未回</span>
+            </div>
+            <div class="entry-title">通知回执</div>
+            <div class="entry-desc">一键发通知 + 自动统计回执</div>
+          </button>
+
+          <button class="entry-card" data-toast="打开报名统计">
+            <div class="entry-head">
+              <div class="entry-icon purple"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></div>
+              <span class="entry-status">18/40</span>
+            </div>
+            <div class="entry-title">报名统计</div>
+            <div class="entry-desc">班级活动报名 · 自动汇总</div>
+          </button>
+
+          <button class="entry-card" data-toast="打开班级日报">
+            <div class="entry-head">
+              <div class="entry-icon rose"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+              <span class="entry-status ok">今天已生成</span>
+            </div>
+            <div class="entry-title">班级日报</div>
+            <div class="entry-desc">AI 每天自动整理班级动态</div>
+          </button>
+
+          <button class="entry-card create" data-toast="创建一个新应用">
+            <div class="entry-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="entry-title">创建应用</div>
+            <div class="entry-desc">把组内流程做成应用</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 底部对话框（兜底 A 类，让老师"如果想不到入口可以直接说"） -->
+      <div class="section-label">
+        <div class="section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          或者直接告诉飞象
+        </div>
+      </div>
+
+      <div class="compose-area">
+        <textarea id="prompt" placeholder="比如：明天这节课怎么上？参考学校资料整理成适合高一(3)班的教案、课件和练习。"></textarea>
+        <div class="composer-footer">
+          <div class="composer-tools">
+            <button class="tool-btn" title="上传附件" data-toast="正式版可上传附件">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button class="tool-btn" title="语音输入" data-toast="正式版可接入语音输入">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg>
+            </button>
+            <span class="reference-note">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 2"/></svg>
+              <span>可参考学校资料和你有权限的数据</span>
+            </span>
+          </div>
+          <button class="send" id="send" title="发送">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="quick-row">
+        <span class="quick-kicker">试着这样说</span>
+        <button class="quick" data-fill="明天这节课怎么上？参考学校资料，整理成适合高一(3)班的教案、课件和练习。">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          明天这节课怎么上
+        </button>
+        <button class="quick" data-fill="这次作业错在哪？帮我找出共性问题、重点学生，并生成明天的讲评顺序。">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 11l3 3L22 4"/></svg>
+          作业错在哪
+        </button>
+        <button class="quick" data-fill="小明这周第 3 次作文掉分，整理他过去 2 周的所有材料，建议怎么跟。">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          小明怎么跟
+        </button>
+        <button class="quick" data-fill="把通知整理成家长回执，并帮我统计已交、未交、需要提醒的人。">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          通知回执
+        </button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- v33 方案切换器（底部浮动） -->
+<div class="vswitch">
+  <span class="vswitch-label">v33 方案</span>
+  <a href="../1-chatgpt/" class="vs-btn">1 · ChatGPT</a>
+  <a href="../2-doubao/" class="vs-btn active">2 · 豆包</a>
+  <a href="../3-content-flow/" class="vs-btn">3 · 内容流</a>
+  <a href="../5-scenes/" class="vs-btn">5 · 场景化</a>
+  <a href="../" class="vs-btn vs-home">总览 ↗</a>
+</div>
+<style>
+  .vswitch{
+    position:fixed;bottom:18px;left:50%;
+    transform:translateX(-50%);z-index:9999;
+    display:flex;align-items:center;gap:2px;
+    padding:5px 7px;
+    background:rgba(31,31,29,.88);
+    backdrop-filter:blur(8px);
+    border-radius:99px;
+    box-shadow:0 12px 32px -16px rgba(0,0,0,.5);
+    font-size:12px;
+  }
+  .vswitch-label{padding:0 9px 0 6px;color:rgba(255,254,250,.45);font-size:11px}
+  .vs-btn{
+    padding:6px 11px;border-radius:99px;
+    color:rgba(255,254,250,.72);font-size:12px;font-weight:500;
+    text-decoration:none;transition:all .12s ease;
+  }
+  .vs-btn:hover{color:#fffefa;background:rgba(255,254,250,.1)}
+  .vs-btn.active{background:#fffefa;color:#1f1f1d;font-weight:600}
+  .vs-home{margin-left:3px;padding-left:11px;border-left:1px solid rgba(255,254,250,.18);color:rgba(255,254,250,.55)}
+  @media (max-width:640px){
+    .vswitch{flex-wrap:wrap;justify-content:center;max-width:calc(100% - 24px);border-radius:14px}
+    .vswitch-label{display:none}
+  }
+</style>
+
+<script>
+  const promptEl = document.getElementById('prompt');
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(text){
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  document.querySelectorAll('[data-fill]').forEach((b) => {
+    b.addEventListener('click', () => {
+      promptEl.value = b.dataset.fill;
+      promptEl.focus();
+      window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+    });
+  });
+  document.querySelectorAll('[data-toast]').forEach((b) => {
+    b.addEventListener('click', () => showToast(b.dataset.toast));
+  });
+  document.querySelectorAll('.nav-item').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.getElementById('send').addEventListener('click', () => {
+    const text = promptEl.value.trim();
+    if(!text){ showToast('先说一件想做的事或选一个入口'); promptEl.focus(); return; }
+    showToast('已开始处理，这次过程会留在历史对话里');
+  });
+  promptEl.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)) document.getElementById('send').click();
+  });
+</script>
+</body>
+</html>

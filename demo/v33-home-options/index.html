@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞象 AI 学校版 · v33 首页方案对比</title>
+<style>
+  :root{
+    --bg:#f6f3ed;
+    --surface:#fffefa;
+    --ink:#1f1f1d;
+    --muted:#77716a;
+    --faint:#aaa39a;
+    --line:#e6e0d6;
+    --line-strong:#d5cab8;
+    --gold:#a87e2c;
+    --gold-soft:#f3ead7;
+    --green:#537260;
+    --green-soft:#e8efe9;
+    --blue:#64758f;
+    --blue-soft:#e5ebf3;
+    --purple:#7c5b8a;
+    --purple-soft:#ece5ef;
+    --rose:#a86a72;
+    --rose-soft:#f3e2e4;
+    --shadow:0 22px 52px -36px rgba(45,38,27,.42);
+    --card-shadow:0 16px 36px -28px rgba(45,38,27,.32);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Source Han Sans SC","Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);color:var(--ink);
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .top{
+    padding:40px 32px 22px;
+    max-width:1240px;margin:0 auto;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:14px}
+  .brand-mark{
+    width:24px;height:24px;border-radius:7px;
+    display:grid;place-items:center;
+    background:var(--ink);color:#fffefa;font-size:12px;
+  }
+  .brand-sub{color:var(--muted);font-weight:500}
+
+  h1{
+    margin:18px 0 6px;
+    font-size:32px;font-weight:600;line-height:1.25;letter-spacing:-.01em;
+  }
+
+  /* 用户场景梳理 · 石墨文档外链 */
+  .doc-link{
+    display:inline-flex;align-items:center;gap:10px;
+    margin-top:14px;
+    padding:10px 14px 10px 12px;
+    border:1px solid var(--line);
+    border-radius:11px;
+    background:var(--surface);
+    color:var(--ink);
+    font-size:13.5px;font-weight:560;
+    transition:all .15s ease;
+    box-shadow:0 1px 3px rgba(45,38,27,.04);
+    max-width:fit-content;
+  }
+  .doc-link:hover{
+    border-color:#cbbb9d;
+    background:#fffefa;
+    box-shadow:0 12px 26px -18px rgba(45,38,27,.35);
+    transform:translateY(-1px);
+  }
+  .doc-link .doc-icon{
+    width:28px;height:28px;border-radius:7px;
+    display:grid;place-items:center;
+    background:linear-gradient(135deg, var(--gold-soft), #f8f0db);
+    color:var(--gold);
+    flex:0 0 auto;
+  }
+  .doc-link .doc-title{letter-spacing:-.005em}
+  .doc-link .doc-meta{
+    color:var(--muted);font-size:12px;font-weight:500;
+    padding-left:10px;margin-left:2px;
+    border-left:1px solid var(--line);
+  }
+  .doc-link .doc-arrow{
+    color:var(--faint);flex:0 0 auto;
+    transition:transform .15s ease, color .15s ease;
+  }
+  .doc-link:hover .doc-arrow{
+    color:var(--ink);
+    transform:translate(2px,-2px);
+  }
+
+  .meta{
+    margin-top:18px;
+    display:flex;flex-wrap:wrap;gap:8px;
+  }
+  .meta-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 10px;border-radius:99px;
+    background:var(--surface);border:1px solid var(--line);
+    color:#5a544b;font-size:12.5px;
+  }
+  .meta-chip svg{color:var(--gold)}
+
+  .grid{
+    max-width:1240px;margin:30px auto 0;
+    padding:0 32px 60px;
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:22px;
+  }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:var(--card-shadow);
+    display:flex;flex-direction:column;
+    transition:transform .15s ease, border-color .15s ease;
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    border-color:#cbbb9d;
+  }
+  .card.recommend{
+    border-color:#cbbb9d;
+    box-shadow:0 22px 50px -28px rgba(168,126,44,.45),0 1px 3px rgba(45,38,27,.06);
+    position:relative;
+  }
+  .card.recommend::before{
+    content:"";
+    position:absolute;inset:-1px;
+    border-radius:18px;
+    padding:1px;
+    background:linear-gradient(135deg, rgba(168,126,44,.7), rgba(168,126,44,.15));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    pointer-events:none;z-index:1;
+  }
+  .card-cover{
+    height:180px;
+    position:relative;
+    overflow:hidden;
+    display:flex;align-items:flex-end;
+    padding:18px 20px;
+  }
+  .card-cover.c1{background:linear-gradient(135deg,#ede5d2,#f3ead7)}
+  .card-cover.c2{background:linear-gradient(135deg,#e8d8b3,#ddc78f)}
+  .card-cover.c3{background:linear-gradient(135deg,#cdd9e5,#e5ebf3)}
+  .card-cover.c4{background:linear-gradient(135deg,#3b3733,#5a544b)}
+  .card-cover.c4 *{color:#fffefa}
+
+  /* 卡片缩略示意图：用色块表示布局 */
+  .thumb{
+    position:absolute;top:18px;right:20px;
+    width:130px;height:90px;
+    background:var(--surface);
+    border-radius:8px;
+    box-shadow:0 6px 18px -12px rgba(0,0,0,.3);
+    overflow:hidden;
+    display:flex;
+  }
+  .thumb-side{
+    width:30%;background:#ece8df;
+    display:flex;flex-direction:column;gap:3px;padding:5px 4px;
+  }
+  .thumb-side i{
+    height:5px;background:#d8d2c4;border-radius:2px;
+  }
+  .thumb-side i:first-child{background:#1f1f1d;height:6px}
+  .thumb-main{flex:1;padding:7px;display:flex;flex-direction:column;gap:5px}
+  .thumb-line{height:6px;background:#e9e4db;border-radius:2px}
+  .thumb-line.dark{background:#3f3a32;height:8px;width:60%}
+  .thumb-box{
+    flex:1;background:#f6f3ed;border:1px solid #e6e0d6;border-radius:3px;
+  }
+  .thumb-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:3px;
+  }
+  .thumb-grid i{
+    height:14px;background:#f3ead7;border-radius:2px;
+  }
+  .thumb-row{
+    display:flex;gap:3px;overflow:hidden;
+  }
+  .thumb-row i{
+    flex:0 0 24px;height:16px;background:#e5ebf3;border-radius:2px;
+  }
+  .thumb-side.tree{
+    background:#ece8df;width:38%;
+  }
+  .thumb-side.tree i{background:#d8d2c4}
+  .thumb-side.tree i:nth-child(2n){width:80%}
+  .thumb-act{
+    width:14px;background:#dcd2bb;
+    display:flex;flex-direction:column;gap:4px;padding:4px 0;align-items:center;
+  }
+  .thumb-act i{width:8px;height:8px;background:#a87e2c;border-radius:2px}
+
+  .card-tag{
+    position:absolute;top:18px;left:20px;
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px;border-radius:99px;
+    background:rgba(255,254,250,.85);color:#5a544b;
+    font-size:11.5px;font-weight:560;
+    backdrop-filter:blur(6px);
+  }
+  .card-cover.c4 .card-tag{background:rgba(255,254,250,.18);color:#fffefa}
+
+  .card-num{
+    font-size:46px;font-weight:600;color:var(--ink);
+    line-height:1;opacity:.85;
+  }
+  .card-cover.c4 .card-num{color:#fffefa}
+
+  .card-body{padding:18px 20px 18px;display:flex;flex-direction:column;gap:10px}
+  .card-title{font-size:19px;font-weight:620;color:var(--ink)}
+  .card-desc{color:var(--muted);font-size:13.5px;line-height:1.55}
+  .card-pros{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .pro,.con{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:3px 9px;border-radius:6px;
+    font-size:11.5px;font-weight:500;
+  }
+  .pro{background:var(--green-soft);color:var(--green)}
+  .con{background:var(--rose-soft);color:var(--rose)}
+  .card-foot{
+    margin-top:6px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding-top:14px;border-top:1px solid #f0ece4;
+  }
+  .card-foot-meta{color:var(--faint);font-size:12px}
+  .card-open{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:8px 14px;border-radius:9px;
+    background:var(--ink);color:#fffefa;
+    font-size:13px;font-weight:560;
+  }
+  .card-open:hover{background:#000}
+
+  .note{
+    max-width:1240px;margin:0 auto;
+    padding:0 32px 60px;
+    color:var(--muted);font-size:13px;
+  }
+  .note b{color:var(--ink);font-weight:600}
+
+  @media (max-width:880px){
+    .grid{grid-template-columns:1fr}
+    h1{font-size:26px}
+    .top{padding:28px 18px 14px}
+    .grid,.note{padding-left:18px;padding-right:18px}
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <span class="brand-mark">飞</span>
+    <span>飞象 AI 学校版</span>
+    <span class="brand-sub">· v33 首页方案对比</span>
+  </div>
+
+  <h1>飞象 AI 首页方案</h1>
+  <a class="doc-link" href="https://shimo.zhenguanyu.com/docs/AP2p0XalNNEYUpPr/" target="_blank" rel="noopener noreferrer">
+    <span class="doc-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>
+    </span>
+    <span class="doc-title">《飞象 AI 学校版 · 用户场景梳理》</span>
+    <span class="doc-meta">石墨文档</span>
+    <svg class="doc-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+  </a>
+
+  <div class="meta">
+    <span class="meta-chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>统一假数据：高一 3 班 70 人 · 今天 3 节课 · 5 位家长未回回执</span>
+    <span class="meta-chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L9 9l-7 1 5 5-1 7 6-3 6 3-1-7 5-5-7-1z"/></svg>统一覆盖 codex 8 类入口意图</span>
+    <span class="meta-chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>每个方案右下角有切换器，可一键跳到别的方案</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- 方案 1 -->
+  <div class="card">
+    <div class="card-cover c1">
+      <span class="card-tag">ChatGPT / Claude</span>
+      <div class="thumb">
+        <div class="thumb-side">
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="thumb-main">
+          <div style="flex:1"></div>
+          <div class="thumb-line dark" style="width:40%;margin:0 auto"></div>
+          <div class="thumb-box" style="flex:0 0 22px"></div>
+          <div style="flex:1"></div>
+        </div>
+      </div>
+      <div class="card-num">01</div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">ChatGPT 极简（纯 A）</div>
+      <div class="card-desc">主区超大留白 + 中央对话框。侧栏保留完整资产入口（知识库 / 班级 / 应用）。形态最熟悉、上手成本最低，最像 ChatGPT。</div>
+      <div class="card-pros">
+        <span class="pro">✓ A 生成承接最强</span>
+        <span class="pro">✓ 学习成本最低</span>
+        <span class="con">✗ B 浏览靠侧栏二级</span>
+        <span class="con">✗ 跟 ChatGPT 太像</span>
+      </div>
+      <div class="card-foot">
+        <span class="card-foot-meta">极端 A（对话兜底一切）</span>
+        <a class="card-open" href="1-chatgpt/" target="_blank">打开方案 1 →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 2 · 对话 + 内容流（A + B） -->
+  <div class="card">
+    <div class="card-cover c3">
+      <span class="card-tag">飞象老师 c 端形态</span>
+      <div class="thumb">
+        <div class="thumb-side">
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="thumb-main">
+          <div class="thumb-box" style="flex:0 0 22px"></div>
+          <div style="display:flex;gap:3px;margin-top:3px">
+            <div class="thumb-line dark" style="flex:1;height:4px"></div>
+            <div class="thumb-line" style="flex:1;height:4px"></div>
+            <div class="thumb-line" style="flex:1;height:4px"></div>
+            <div class="thumb-line" style="flex:1;height:4px"></div>
+            <div class="thumb-line" style="flex:1;height:4px"></div>
+          </div>
+          <div class="thumb-row"><i></i><i></i><i></i><i></i></div>
+          <div class="thumb-row"><i></i><i></i><i></i><i></i></div>
+          <div class="thumb-row"><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <div class="card-num">02</div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">对话 + 内容流（A + B）</div>
+      <div class="card-desc">顶部对话框（A）+ 来源 tabs（推荐 / 学校知识库 / 教研沉淀 / <b>应用广场</b> / 我的应用）+ 4 列瀑布流。资料和应用统一卡片语言，老师按 tab 切换浏览。滑下去对话框缩成底部悬浮条，tabs 吸顶。</div>
+      <div class="card-pros">
+        <span class="pro">✓ 视觉最像飞象老师 c 端</span>
+        <span class="pro">✓ B 浏览体验最佳</span>
+        <span class="pro">✓ 应用 / 资料统一卡片语言</span>
+        <span class="con">✗ C 用应用要切 tab，权重弱</span>
+      </div>
+      <div class="card-foot">
+        <span class="card-foot-meta">A + B（C 进 tab）</span>
+        <a class="card-open" href="2-content-flow/" target="_blank">打开方案 2 →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 3 · 任务接续（方案 2 + 最近任务） -->
+  <div class="card recommend">
+    <div class="card-cover c4">
+      <span class="card-tag">★ 推荐｜对应"老师刚才在干嘛"</span>
+      <div class="thumb">
+        <div class="thumb-side"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="thumb-main">
+          <div class="thumb-box" style="flex:0 0 18px"></div>
+          <div style="display:flex;gap:2px;margin-top:3px">
+            <div class="thumb-line" style="flex:1;height:5px"></div>
+            <div class="thumb-line" style="flex:1;height:5px"></div>
+            <div class="thumb-line" style="flex:1;height:5px"></div>
+            <div class="thumb-line" style="flex:1;height:5px"></div>
+            <div class="thumb-line" style="flex:1;height:5px"></div>
+            <div class="thumb-line" style="flex:1;height:5px"></div>
+          </div>
+          <div style="display:flex;gap:2px;margin-top:4px">
+            <div class="thumb-line dark" style="flex:1;height:3px"></div>
+            <div class="thumb-line dark" style="flex:1;height:3px"></div>
+            <div class="thumb-line dark" style="flex:1;height:3px"></div>
+            <div class="thumb-line dark" style="flex:1;height:3px"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:2px;margin-top:3px">
+            <div class="thumb-box" style="height:13px"></div>
+            <div class="thumb-box" style="height:13px"></div>
+            <div class="thumb-box" style="height:13px"></div>
+            <div class="thumb-box" style="height:13px"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:2px;margin-top:2px">
+            <div class="thumb-box" style="height:13px"></div>
+            <div class="thumb-box" style="height:13px"></div>
+            <div class="thumb-box" style="height:13px"></div>
+            <div class="thumb-box" style="height:13px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-num">03</div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">任务接续：对话 + 最近任务 + 内容流</div>
+      <div class="card-desc">在方案 2 基础上，对话框下方加一层「最近」任务卡：刚扫的作业、待批的作文、正在进行的测验、待发布的草稿。<b>只放事实，不预测</b>——回应飞象作业/作文已经验证过的"老师扫了，回首页就该看见"。</div>
+      <div class="card-pros">
+        <span class="pro">✓ 接续手头活，扫了就看见</span>
+        <span class="pro">✓ 任务卡只放事实，零踩雷</span>
+        <span class="pro">✓ 兜底入口卡承接新老师空状态</span>
+        <span class="con">✗ 比方案 2 多一段，首屏更密</span>
+      </div>
+      <div class="card-foot">
+        <span class="card-foot-meta">= 方案 2 + 最近任务层</span>
+        <a class="card-open" href="3-scenes/" target="_blank">打开方案 3 →</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="note">
+  <b>review 建议</b>：3 个方案都在新标签页打开，进入后右下角有浮动切换器可一键跳到别的方案，方便对比。<br>
+  <b>定位光谱</b>：方案 1（极简对话）→ 方案 2（对话 + 内容浏览）→ 方案 3（对话 + 任务接续 + 内容浏览）。按"AI-first / 浏览 / 任务接续"三种打开 APP 心态选定位。<br>
+  <b>已归档方案</b>：原方案 2（豆包应用直达）和原方案 4（Cursor 双栏）保留在 <code>_archive/</code>，跟当前 3 个方案功能重叠或方向偏离，不进导航。<br>
+  <b>跟 codex 入口意图文档对齐</b>：A = Action 生成、B = Browse 浏览、C = Use 用工具，详见 <code>飞象 AI demo/codex/飞象 AI 学校版入口级意图梳理.md</code>。
+</div>
+
+</body>
+</html>

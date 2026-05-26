@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞象 AI · 方案 1 · ChatGPT 极简</title>
+<style>
+  :root{
+    --bg:#f6f3ed;
+    --side:#f1eee7;
+    --surface:#fffefa;
+    --surface-2:#fbfaf6;
+    --ink:#1f1f1d;
+    --muted:#77716a;
+    --faint:#aaa39a;
+    --line:#e6e0d6;
+    --line-strong:#d5cab8;
+    --gold:#a87e2c;
+    --gold-soft:#f3ead7;
+    --green:#537260;
+    --shadow:0 22px 52px -36px rgba(45,38,27,.42);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Source Han Sans SC","Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,textarea{font:inherit}
+  button{border:0;background:none;color:inherit;cursor:pointer}
+  a{color:inherit;text-decoration:none}
+
+  .app{
+    height:100vh;
+    display:grid;
+    grid-template-columns:252px minmax(0,1fr);
+    overflow:hidden;
+  }
+
+  /* 侧栏：v29 风格（保留飞象核心资产入口）+ 一组精简历史对话 */
+  .sidebar{
+    min-width:0;
+    background:var(--side);
+    border-right:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    padding:14px 10px;
+  }
+  .brand{
+    display:flex;align-items:center;gap:9px;
+    padding:7px 8px 14px;font-weight:650;
+  }
+  .brand-mark{
+    width:22px;height:22px;border-radius:7px;
+    display:grid;place-items:center;
+    background:var(--ink);color:#fffefa;font-size:12px;
+  }
+  .brand-sub{color:var(--muted);font-size:12px;font-weight:500;margin-left:auto}
+  .new-chat{
+    height:36px;
+    display:flex;align-items:center;gap:9px;
+    padding:0 10px;border-radius:8px;
+    background:var(--ink);color:#fffefa;font-weight:560;
+    margin:0 2px 12px;
+  }
+  .new-chat-kbd{margin-left:auto;font-size:11px;color:#aaa39a}
+
+  .side-scroll{
+    flex:1;min-height:0;overflow:auto;
+    display:flex;flex-direction:column;
+  }
+  .nav-section{margin-top:6px}
+  .nav-title{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 9px 4px;
+    font-size:11px;color:var(--faint);font-weight:650;
+  }
+  .nav-title .nav-title-link{
+    color:var(--faint);font-size:11px;font-weight:500;
+  }
+  .nav-title .nav-title-link:hover{color:var(--ink)}
+  .nav-item{
+    width:100%;min-height:34px;
+    display:flex;align-items:center;gap:9px;
+    padding:7px 9px;border-radius:7px;
+    color:#45413c;font-size:13px;
+    text-align:left;
+  }
+  .nav-item:hover{background:#e9e4db}
+  .nav-item.active{background:#ebe2d0;color:var(--ink);font-weight:600}
+  .nav-item svg{flex:0 0 auto;color:#807970}
+  .nav-item.active svg{color:var(--gold)}
+  .nav-count{margin-left:auto;color:var(--faint);font-size:11px}
+
+  .history-item{
+    width:100%;min-height:30px;
+    display:flex;align-items:center;gap:8px;
+    padding:5px 9px;border-radius:6px;
+    color:#5a544b;font-size:12.5px;
+    text-align:left;overflow:hidden;
+  }
+  .history-item:hover{background:#e9e4db;color:var(--ink)}
+  .history-text{
+    flex:1;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .history-item svg{flex:0 0 auto;color:var(--faint)}
+
+  .school-chip{
+    margin:8px 2px 10px;padding:10px;
+    border:1px solid var(--line);border-radius:10px;
+    background:rgba(255,255,255,.38);
+  }
+  .school-name{font-size:13px;font-weight:620}
+  .school-meta{margin-top:2px;color:var(--muted);font-size:12px}
+  .user{
+    border-top:1px solid var(--line);
+    padding:11px 8px 2px;
+    display:flex;align-items:center;gap:9px;
+  }
+  .avatar{
+    width:30px;height:30px;border-radius:50%;
+    display:grid;place-items:center;
+    background:#d9d1c2;color:#554d43;font-weight:650;
+  }
+  .user-name{font-size:13px;font-weight:560}
+  .user-role{font-size:11px;color:var(--muted);margin-top:1px}
+
+  /* 主区 */
+  .main{
+    min-width:0;height:100vh;overflow:auto;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 180px),
+      var(--bg);
+    display:flex;flex-direction:column;
+  }
+  .topbar{
+    height:58px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;border-bottom:1px solid rgba(230,224,214,.7);
+  }
+  .crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+  .crumb strong{color:var(--ink);font-weight:620}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .icon-btn{
+    width:34px;height:34px;
+    display:grid;place-items:center;
+    border-radius:8px;color:var(--muted);
+  }
+  .icon-btn:hover{background:#ece7dd;color:var(--ink)}
+  .quota{
+    height:30px;display:inline-flex;align-items:center;gap:7px;
+    padding:0 10px;border-radius:8px;
+    background:rgba(255,255,255,.54);border:1px solid var(--line);
+    color:var(--muted);font-size:12px;
+  }
+  .quota-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+  /* ChatGPT 风：超大空、超大对话框、几乎不放别的 */
+  .stage{
+    flex:1;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 24px;
+  }
+  .stage-inner{
+    width:min(760px,100%);
+    margin-bottom:8vh;
+  }
+  h1{
+    margin:0 0 28px;
+    font-size:34px;font-weight:580;line-height:1.25;
+    text-align:center;
+  }
+  h1 .light{color:var(--muted);font-weight:400}
+
+  .composer{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    border-radius:22px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  textarea{
+    width:100%;min-height:108px;
+    padding:22px 18px 12px;
+    border:0;resize:none;outline:0;
+    background:transparent;color:var(--ink);
+    font-size:16px;line-height:1.58;
+  }
+  textarea::placeholder{color:#aaa299}
+  .composer-footer{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:8px 12px 10px;
+  }
+  .composer-tools{display:flex;align-items:center;gap:4px}
+  .tool-btn{
+    width:32px;height:32px;display:grid;place-items:center;
+    border-radius:8px;color:var(--muted);
+  }
+  .tool-btn:hover{background:#f1eee7;color:var(--ink)}
+  .reference-note{
+    display:inline-flex;align-items:center;gap:6px;
+    height:30px;padding:0 10px;
+    border:1px solid #e6dcc2;border-radius:8px;
+    background:var(--gold-soft);
+    color:var(--gold);
+    font-size:12.5px;font-weight:540;
+    cursor:pointer;
+    transition:all .12s ease;
+  }
+  .reference-note:hover{background:#ecdfba;border-color:#d4bf86}
+  .reference-note svg{color:var(--gold)}
+  .reference-note .chev{opacity:.65;margin-left:0}
+  .send{
+    width:36px;height:36px;display:grid;place-items:center;
+    border-radius:10px;color:#fffefa;background:var(--ink);
+  }
+  .send:hover{background:#000}
+
+  /* 主区底部 footer note：ChatGPT 风的"AI 可能会出错" */
+  .stage-footer{
+    margin-top:14px;
+    text-align:center;
+    color:var(--faint);font-size:12px;
+  }
+  .stage-footer a{color:var(--muted);text-decoration:underline}
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;
+    transform:translate(-50%,18px);opacity:0;pointer-events:none;
+    min-width:220px;max-width:min(420px,calc(100vw - 32px));
+    padding:10px 14px;border-radius:10px;
+    background:#24211d;color:#fffefa;
+    box-shadow:0 18px 38px -24px rgba(0,0,0,.6);
+    transition:opacity .18s ease, transform .18s ease;
+    font-size:13px;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:860px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .topbar{padding:0 18px}
+    .stage{padding:0 16px}
+    h1{font-size:26px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 侧栏：v29 标准（知识库 / 班级 / 应用 都在）+ 一组精简历史对话 -->
+  <aside class="sidebar" aria-label="飞象 AI 导航">
+    <div class="brand">
+      <span class="brand-mark">飞</span>
+      <span>飞象 AI</span>
+      <span class="brand-sub">学校版</span>
+    </div>
+
+    <button class="new-chat" data-toast="已新建对话">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      新对话
+      <span class="new-chat-kbd">⌘N</span>
+    </button>
+
+    <button class="nav-item" data-toast="历史对话" style="margin:0 2px 6px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      历史对话
+      <span class="nav-count">86</span>
+    </button>
+
+    <div class="side-scroll">
+      <!-- 知识库 -->
+      <div class="nav-section">
+        <div class="nav-title">知识库</div>
+        <button class="nav-item" data-toast="实验中学知识库">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          学校知识库
+          <span class="nav-count">+12</span>
+        </button>
+        <button class="nav-item" data-toast="我的知识库">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><circle cx="12" cy="7" r="4"/></svg>
+          我的知识库
+          <span class="nav-count">23</span>
+        </button>
+      </div>
+
+      <!-- 常用 -->
+      <div class="nav-section">
+        <div class="nav-title">常用</div>
+        <button class="nav-item" data-toast="我的班级">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          我的班级
+          <span class="nav-count">2</span>
+        </button>
+        <button class="nav-item" data-toast="我的内容">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          我的内容
+          <span class="nav-count">30</span>
+        </button>
+      </div>
+
+      <!-- 应用 -->
+      <div class="nav-section">
+        <div class="nav-title">应用</div>
+        <button class="nav-item" data-toast="官方应用">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          官方应用
+          <span class="nav-count">3</span>
+        </button>
+        <button class="nav-item" data-toast="校本应用">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          校本应用
+          <span class="nav-count">8</span>
+        </button>
+      </div>
+
+    </div>
+
+    <div class="school-chip">
+      <div class="school-name">实验中学</div>
+      <div class="school-meta">认可的内容可保存到知识库</div>
+    </div>
+
+    <div class="user">
+      <div class="avatar">张</div>
+      <div>
+        <div class="user-name">张老师</div>
+        <div class="user-role">高一语文 · 学科老师</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">
+        <strong>实验中学</strong>
+        <span>/</span>
+        <span>飞象 AI</span>
+        <span style="color:var(--faint);margin:0 4px">·</span>
+        <span style="color:var(--muted)">方案 1 · ChatGPT 极简</span>
+      </div>
+      <div class="top-actions">
+        <div class="quota"><span class="quota-dot"></span>本月算力正常</div>
+        <button class="icon-btn" title="设置" data-toast="设置">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1h.38a2 2 0 1 1 0 4h-.09c-.36 0-.69.08-1 .22z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 极简主区：超大空 + 大对话框 + 一行 footer note -->
+    <section class="stage">
+      <div class="stage-inner">
+        <h1>下午好，张老师 <br><span class="light">今天想做什么？</span></h1>
+
+        <div class="composer">
+          <textarea id="prompt" placeholder="问飞象任何事 —— 备课、改作业、出讲评、找资料、写评语、整理家长会材料……"></textarea>
+          <div class="composer-footer">
+            <div class="composer-tools">
+              <button class="tool-btn" title="上传附件" data-toast="正式版可上传附件">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <button class="tool-btn" title="语音输入" data-toast="正式版可接入语音输入">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg>
+              </button>
+              <button class="reference-note" data-toast="选择参考的知识库范围（全部 / 我的 / 学校 / 教研沉淀）">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <span>全部知识库</span>
+                <svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </div>
+            <button class="send" id="send" title="发送">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="stage-footer">
+          飞象 AI 可能会出错。涉及学情、家校、决策时请人工核对。
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- v33 方案切换器（底部浮动） -->
+<div class="vswitch">
+  <span class="vswitch-label">v33 方案</span>
+  <a href="../1-chatgpt/" class="vs-btn active">1 · ChatGPT 极简</a>
+  <a href="../2-content-flow/" class="vs-btn">2 · 对话 + 内容流</a>
+  <a href="../3-scenes/" class="vs-btn">3 · 任务接续</a>
+  <a href="../" class="vs-btn vs-home">总览 ↗</a>
+</div>
+<style>
+  .vswitch{
+    position:fixed;bottom:18px;left:50%;
+    transform:translateX(-50%);z-index:9999;
+    display:flex;align-items:center;gap:2px;
+    padding:5px 7px;
+    background:rgba(31,31,29,.88);
+    backdrop-filter:blur(8px);
+    border-radius:99px;
+    box-shadow:0 12px 32px -16px rgba(0,0,0,.5);
+    font-size:12px;
+  }
+  .vswitch-label{
+    padding:0 9px 0 6px;
+    color:rgba(255,254,250,.45);font-size:11px;
+  }
+  .vs-btn{
+    padding:6px 11px;border-radius:99px;
+    color:rgba(255,254,250,.72);
+    font-size:12px;font-weight:500;
+    text-decoration:none;
+    transition:all .12s ease;
+  }
+  .vs-btn:hover{color:#fffefa;background:rgba(255,254,250,.1)}
+  .vs-btn.active{
+    background:#fffefa;color:#1f1f1d;font-weight:600;
+  }
+  .vs-home{
+    margin-left:3px;padding-left:11px;
+    border-left:1px solid rgba(255,254,250,.18);
+    color:rgba(255,254,250,.55);
+  }
+  @media (max-width:640px){
+    .vswitch{flex-wrap:wrap;justify-content:center;max-width:calc(100% - 24px);border-radius:14px}
+    .vswitch-label{display:none}
+  }
+</style>
+
+<script>
+  const promptEl = document.getElementById('prompt');
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(text){
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  document.querySelectorAll('[data-toast]').forEach((b) => {
+    b.addEventListener('click', () => showToast(b.dataset.toast));
+  });
+  document.querySelectorAll('.nav-item').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.getElementById('send').addEventListener('click', () => {
+    const text = promptEl.value.trim();
+    if(!text){ showToast('先说一件想做的事'); promptEl.focus(); return; }
+    showToast('已开始处理，这次过程会留在历史对话里');
+  });
+  promptEl.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)) document.getElementById('send').click();
+  });
+</script>
+</body>
+</html>

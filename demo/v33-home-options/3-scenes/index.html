@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞象 AI · 方案 3 · 任务接续（对话 + 最近任务 + 内容流）</title>
+<style>
+  :root{
+    --bg:#f6f3ed;
+    --side:#f1eee7;
+    --surface:#fffefa;
+    --surface-2:#fbfaf6;
+    --ink:#1f1f1d;
+    --muted:#77716a;
+    --faint:#aaa39a;
+    --line:#e6e0d6;
+    --line-strong:#d5cab8;
+    --gold:#a87e2c;
+    --gold-soft:#f3ead7;
+    --green:#537260;
+    --green-soft:#e8efe9;
+    --blue:#64758f;
+    --blue-soft:#e5ebf3;
+    --purple:#7c5b8a;
+    --purple-soft:#ece5ef;
+    --rose:#a86a72;
+    --rose-soft:#f3e2e4;
+    --shadow:0 22px 52px -36px rgba(45,38,27,.42);
+    --card-shadow:0 10px 24px -20px rgba(45,38,27,.3);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Source Han Sans SC","Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);color:var(--ink);
+    font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  button,textarea{font:inherit}
+  button{border:0;background:none;color:inherit;cursor:pointer}
+
+  .app{height:100vh;display:grid;grid-template-columns:248px minmax(0,1fr);overflow:hidden}
+
+  /* 侧栏 v29 风格 */
+  .sidebar{
+    min-width:0;background:var(--side);
+    border-right:1px solid var(--line);
+    display:flex;flex-direction:column;padding:14px 10px;
+  }
+  .brand{display:flex;align-items:center;gap:9px;padding:7px 8px 18px;font-weight:650}
+  .brand-mark{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:var(--ink);color:#fffefa;font-size:12px}
+  .brand-sub{color:var(--muted);font-size:12px;font-weight:500;margin-left:auto}
+  .new-chat{height:36px;display:flex;align-items:center;gap:9px;padding:0 10px;border-radius:8px;background:var(--ink);color:#fffefa;font-weight:560;margin:0 2px 12px}
+  .nav-section{margin-top:8px}
+  .nav-title{padding:8px 9px 5px;font-size:11px;color:var(--faint);font-weight:650}
+  .nav-item{width:100%;min-height:34px;display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;color:#45413c;font-size:13px;text-align:left}
+  .nav-item:hover{background:#e9e4db}
+  .nav-item.active{background:#ebe2d0;color:var(--ink);font-weight:600}
+  .nav-item svg{flex:0 0 auto;color:#807970}
+  .nav-item.active svg{color:var(--gold)}
+  .nav-count{margin-left:auto;color:var(--faint);font-size:11px}
+  .side-spacer{flex:1}
+  .school-chip{margin:8px 2px 10px;padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.38)}
+  .school-name{font-size:13px;font-weight:620}
+  .school-meta{margin-top:2px;color:var(--muted);font-size:12px}
+  .user{border-top:1px solid var(--line);padding:11px 8px 2px;display:flex;align-items:center;gap:9px}
+  .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#d9d1c2;color:#554d43;font-weight:650}
+  .user-name{font-size:13px;font-weight:560}
+  .user-role{font-size:11px;color:var(--muted);margin-top:1px}
+
+  /* 主区 */
+  .main{
+    min-width:0;height:100vh;overflow:auto;
+    overflow-anchor:none; /* 关键：禁用 scroll anchoring，避免 hero 折叠时 scrollTop 自动跳动 */
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 180px),
+      var(--bg);
+  }
+  .topbar{
+    position:sticky;top:0;z-index:6;
+    background:rgba(246,243,237,.92);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    height:58px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;border-bottom:1px solid rgba(230,224,214,.7);
+  }
+  .crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+  .crumb strong{color:var(--ink);font-weight:620}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--muted)}
+  .icon-btn:hover{background:#ece7dd;color:var(--ink)}
+  .quota{height:30px;display:inline-flex;align-items:center;gap:7px;padding:0 10px;border-radius:8px;background:rgba(255,255,255,.54);border:1px solid var(--line);color:var(--muted);font-size:12px}
+  .quota-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+  /* 上半：保留 v29 极简对话起手 */
+  .stage-top{
+    width:min(820px,calc(100% - 56px));
+    margin:42px auto 0;
+    transition:max-height .42s ease, opacity .28s ease, margin .35s ease, transform .35s ease;
+    overflow:hidden;
+    max-height:520px;
+    transform-origin:top center;
+  }
+  .main.scrolled .stage-top{
+    max-height:0;
+    opacity:0;
+    margin-top:0;
+    margin-bottom:0;
+    transform:scaleY(.96);
+    pointer-events:none;
+  }
+  .hero{margin-bottom:18px}
+  h1{margin:0;font-size:28px;font-weight:580;line-height:1.28}
+  .composer{
+    position:relative;background:var(--surface);
+    border:1px solid var(--line-strong);border-radius:18px;
+    box-shadow:var(--shadow);overflow:hidden;
+  }
+  textarea{
+    width:100%;min-height:96px;
+    padding:20px 18px 12px;
+    border:0;resize:none;outline:0;background:transparent;
+    color:var(--ink);font-size:16px;line-height:1.55;
+  }
+  textarea::placeholder{color:#aaa299}
+  .composer-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #f0ece4;padding:10px 12px}
+  .composer-tools{display:flex;align-items:center;gap:4px}
+  .tool-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:var(--muted)}
+  .tool-btn:hover{background:#f1eee7;color:var(--ink)}
+  .reference-note{
+    display:inline-flex;align-items:center;gap:6px;
+    height:30px;padding:0 10px;
+    border:1px solid #e6dcc2;border-radius:8px;
+    background:var(--gold-soft);
+    color:var(--gold);
+    font-size:12.5px;font-weight:540;
+    cursor:pointer;
+    transition:all .12s ease;
+  }
+  .reference-note:hover{background:#ecdfba;border-color:#d4bf86}
+  .reference-note svg{color:var(--gold)}
+  .reference-note .chev{opacity:.65}
+  .send{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;color:#fffefa;background:var(--ink)}
+
+  .quick-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+  .quick-kicker{width:100%;color:var(--muted);font-size:12px;margin:2px 0 1px}
+  .quick{min-height:32px;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.5);color:#48433d;font-size:13px}
+  .quick:hover{border-color:#cbbb9d;background:#fffefa}
+  .quick svg{color:var(--gold)}
+
+  /* 下半：内容浏览（4 列瀑布流，参考飞象老师 c 端） */
+  .stream-section{
+    margin-top:38px;padding-bottom:80px;
+    width:min(1180px,calc(100% - 56px));
+    margin-left:auto;margin-right:auto;
+  }
+
+  /* 来源 tabs：跨学科/来源切换（吸顶） */
+  .filter-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:14px;
+    margin-bottom:22px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(230,224,214,.7);
+    position:sticky;
+    top:58px;
+    z-index:5;
+    background:rgba(246,243,237,.92);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    transition:box-shadow .25s ease, padding .25s ease;
+  }
+  .main.scrolled .filter-bar{
+    box-shadow:0 6px 18px -16px rgba(45,38,27,.4);
+    padding-top:12px;padding-bottom:12px;
+  }
+  .main.scrolled .stream-section{margin-top:0}
+  .tabs{
+    display:flex;align-items:center;gap:2px;
+    overflow-x:auto;
+    scrollbar-width:none;
+    flex:1;min-width:0;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:0 0 auto;
+    padding:7px 14px;
+    border-radius:99px;
+    color:var(--muted);
+    font-size:13.5px;font-weight:500;
+    transition:all .15s ease;
+    position:relative;
+  }
+  .tab:hover{color:var(--ink);background:#f1eee7}
+  .tab.active{
+    color:var(--ink);font-weight:650;
+    background:#ebe2d0;
+  }
+  .tab .tab-badge{
+    margin-left:5px;
+    padding:1px 6px;border-radius:99px;
+    font-size:10.5px;
+    background:rgba(168,126,44,.16);color:var(--gold);
+    font-weight:600;
+  }
+  .filter-search{
+    flex:0 0 auto;
+    width:200px;
+    height:32px;
+    display:flex;align-items:center;gap:7px;
+    padding:0 12px;
+    border:1px solid var(--line);border-radius:99px;
+    background:rgba(255,254,250,.5);
+    color:var(--muted);font-size:12.5px;
+  }
+  .filter-search svg{color:var(--faint);flex:0 0 auto}
+  .filter-search input{
+    border:0;outline:0;background:transparent;
+    flex:1;min-width:0;
+    color:var(--ink);font:inherit;
+  }
+
+  /* 4 列瀑布流 */
+  .content-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:18px;
+  }
+
+  /* 卡片视觉：封面占比加大、字号加大、加作者 */
+  .card{
+    background:var(--surface);
+    border:1px solid rgba(230,224,214,.7);
+    border-radius:14px;
+    box-shadow:0 1px 3px rgba(45,38,27,.04);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    text-align:left;
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 18px 32px -22px rgba(45,38,27,.3);
+    border-color:#cbbb9d;
+  }
+  .card-cover{
+    height:148px; /* 4 列瀑布流封面再大一些 */
+    background:linear-gradient(135deg,#e8d8b3,#f3ead7);
+    position:relative;
+    overflow:hidden;
+  }
+  .card-cover.blue{background:linear-gradient(135deg,#bccddc,#dee7f0)}
+  .card-cover.green{background:linear-gradient(135deg,#bdd1c1,#dde7e0)}
+  .card-cover.purple{background:linear-gradient(135deg,#ccb8d3,#e4daea)}
+  .card-cover.rose{background:linear-gradient(135deg,#d8bbc0,#ebd5d8)}
+  .card-cover.ink{background:linear-gradient(135deg,#2c2925,#46413a)}
+  /* 封面装饰大字 */
+  .card-cover-glyph{
+    position:absolute;
+    right:-8px;bottom:-22px;
+    font-size:88px;
+    font-weight:700;
+    color:rgba(31,31,29,.07);
+    line-height:1;
+    letter-spacing:-.04em;
+    user-select:none;
+    pointer-events:none;
+  }
+  .card-cover.ink .card-cover-glyph{color:rgba(255,254,250,.07)}
+  .card-tag{
+    position:absolute;top:10px;left:10px;
+    font-size:10.5px;font-weight:600;letter-spacing:.2px;
+    padding:3px 8px;border-radius:6px;
+    background:rgba(255,254,250,.88);color:#3f3a32;
+    backdrop-filter:blur(6px);
+  }
+  .card-tag.gold{color:var(--gold)}
+  .card-tag.dark{background:rgba(31,31,29,.78);color:#fffefa}
+
+  .card-body{
+    padding:13px 14px 14px;
+    display:flex;flex-direction:column;gap:6px;flex:1;
+  }
+  .card-title{
+    font-size:14.5px;font-weight:650;
+    line-height:1.42;color:var(--ink);
+    letter-spacing:-.005em;
+    display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;
+    min-height:42px;
+  }
+  .card-meta{
+    margin-top:auto;
+    color:var(--muted);font-size:11.5px;
+    padding-top:8px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .card-meta .dot{width:3px;height:3px;border-radius:50%;background:#c5bcab;flex:0 0 3px}
+
+  /* 作者行（第 2 行"别的老师"专用，更社交感） */
+  .card-author{
+    margin-top:auto;
+    padding-top:10px;
+    display:flex;align-items:center;gap:7px;
+    color:var(--muted);font-size:11.5px;
+  }
+  .author-avatar{
+    width:20px;height:20px;border-radius:50%;
+    display:grid;place-items:center;
+    background:#d9d1c2;color:#554d43;
+    font-size:10px;font-weight:650;
+    flex:0 0 20px;
+  }
+  .author-avatar.green{background:#cee0d2;color:var(--green)}
+  .author-avatar.blue{background:#cdd9e5;color:var(--blue)}
+  .author-avatar.purple{background:#d6c4dd;color:var(--purple)}
+  .author-avatar.gold{background:var(--gold);color:#fffefa}
+  .card-author-name{font-weight:560;color:#5a544b}
+  .card-stat{
+    margin-left:auto;
+    display:inline-flex;align-items:center;gap:4px;
+    color:var(--faint);
+  }
+  .card-stat svg{width:11px;height:11px}
+
+  /* 响应式 */
+  @media (max-width:1080px){
+    .content-grid{grid-template-columns:repeat(3,1fr)}
+  }
+  @media (max-width:780px){
+    .content-grid{grid-template-columns:repeat(2,1fr)}
+  }
+
+  /* ===== 方案 5 新增 ===== */
+  .hero-sub{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.55}
+  .hero-sub b{color:var(--ink);font-weight:600}
+
+  /* 中部：最近任务（事件接续 · 老师"刚才在干嘛"） */
+  .recent-section{
+    width:min(1180px,calc(100% - 56px));
+    margin:30px auto 0;
+    transition:max-height .42s ease, opacity .28s ease, margin .35s ease;
+    overflow:hidden;
+    max-height:240px;
+  }
+  .main.scrolled .recent-section{
+    max-height:0;opacity:0;margin-top:0;margin-bottom:0;pointer-events:none;
+  }
+  .recent-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 4px 12px;
+  }
+  .recent-title{
+    display:inline-flex;align-items:center;gap:9px;
+    font-size:14px;font-weight:640;color:var(--ink);
+    letter-spacing:-.005em;
+  }
+  .recent-title-dot{
+    width:7px;height:7px;border-radius:50%;background:var(--rose);
+    box-shadow:0 0 0 3px rgba(168,106,114,.18);
+    animation:pulseDot 2.4s ease-in-out infinite;
+  }
+  @keyframes pulseDot{
+    0%,100%{box-shadow:0 0 0 3px rgba(168,106,114,.18)}
+    50%{box-shadow:0 0 0 5px rgba(168,106,114,.08)}
+  }
+  .recent-title-meta{
+    color:var(--muted);font-size:12.5px;font-weight:500;
+    letter-spacing:0;margin-left:2px;
+  }
+  .recent-more{
+    color:var(--muted);font-size:12.5px;
+    display:inline-flex;align-items:center;gap:3px;
+  }
+  .recent-more:hover{color:var(--ink)}
+  .recent-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:12px;
+  }
+  .recent-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:13px 14px 12px 16px;
+    display:flex;flex-direction:column;gap:7px;
+    position:relative;overflow:hidden;
+    text-align:left;
+    transition:all .18s ease;
+    box-shadow:0 1px 3px rgba(45,38,27,.04);
+    min-height:138px;
+  }
+  .recent-card::before{
+    content:"";
+    position:absolute;left:0;top:0;bottom:0;
+    width:3px;background:var(--gold);
+  }
+  .recent-card.rose::before{background:var(--rose)}
+  .recent-card.blue::before{background:var(--blue)}
+  .recent-card.green::before{background:var(--green)}
+  .recent-card.purple::before{background:var(--purple)}
+  .recent-card:hover{
+    transform:translateY(-2px);
+    border-color:#cbbb9d;
+    box-shadow:0 14px 30px -18px rgba(45,38,27,.28);
+  }
+  .recent-tag{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:600;letter-spacing:.02em;
+    color:var(--gold);
+  }
+  .recent-card.rose .recent-tag{color:var(--rose)}
+  .recent-card.blue .recent-tag{color:var(--blue)}
+  .recent-card.green .recent-tag{color:var(--green)}
+  .recent-card.purple .recent-tag{color:var(--purple)}
+  .recent-tag .tag-dot{
+    width:4px;height:4px;border-radius:50%;
+    background:currentColor;
+  }
+  .recent-headline{
+    font-size:13.5px;font-weight:620;color:var(--ink);
+    line-height:1.42;letter-spacing:-.005em;
+    display:-webkit-box;
+    -webkit-line-clamp:2;line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .recent-stat{
+    font-size:11.5px;color:var(--muted);
+    margin-top:auto;
+    display:flex;align-items:baseline;gap:5px;
+    flex-wrap:wrap;
+  }
+  .recent-stat .big{
+    color:var(--ink);font-weight:680;
+    font-size:14px;letter-spacing:-.01em;
+  }
+  .recent-card.rose .recent-stat .big{color:var(--rose)}
+  .recent-card.blue .recent-stat .big{color:var(--blue)}
+  .recent-card.green .recent-stat .big{color:var(--green)}
+  .recent-stat .when{
+    margin-left:auto;color:var(--faint);font-size:11px;
+  }
+  /* 兜底入口卡：扫描 / 创建新任务 */
+  .recent-card.entry{
+    border:1px dashed var(--line-strong);
+    background:transparent;
+    box-shadow:none;
+    justify-content:center;
+    align-items:flex-start;
+  }
+  .recent-card.entry::before{display:none}
+  .recent-card.entry .entry-icon{
+    width:34px;height:34px;border-radius:10px;
+    display:grid;place-items:center;
+    background:rgba(168,126,44,.1);color:var(--gold);
+    margin-bottom:6px;
+  }
+  .recent-card.entry .entry-title{
+    font-size:13.5px;font-weight:640;color:var(--ink);
+    line-height:1.4;
+  }
+  .recent-card.entry .entry-desc{
+    font-size:11.5px;color:var(--muted);
+    margin-top:3px;line-height:1.4;
+  }
+  .recent-card.entry:hover{
+    border-color:#cbbb9d;background:rgba(255,254,250,.5);
+    transform:translateY(-2px);
+  }
+
+  @media (max-width:1180px){
+    .recent-grid{grid-template-columns:repeat(4,1fr)}
+    .recent-card.entry{display:none}
+  }
+  @media (max-width:880px){
+    .recent-grid{grid-template-columns:repeat(2,1fr)}
+    .recent-section{max-height:none}
+  }
+
+  /* 底部浮动对话框：scrolled 时出现 */
+  .float-composer{
+    position:fixed;
+    bottom:74px; /* 给底部 vswitch 让位 */
+    left:calc(50% + 124px); /* 修正 248px sidebar 偏移 */
+    transform:translateX(-50%) translateY(28px);
+    width:min(720px,calc(100vw - 320px));
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    border-radius:16px;
+    box-shadow:0 24px 64px -28px rgba(45,38,27,.5),0 2px 6px rgba(45,38,27,.06);
+    display:flex;align-items:center;gap:6px;
+    padding:9px 9px 9px 16px;
+    opacity:0;pointer-events:none;
+    transition:opacity .28s ease, transform .32s cubic-bezier(.22,1,.36,1);
+    z-index:200;
+  }
+  body.scrolled .float-composer{
+    opacity:1;pointer-events:auto;
+    transform:translateX(-50%) translateY(0);
+  }
+  .float-composer input{
+    flex:1;min-width:0;
+    border:0;outline:0;background:transparent;
+    color:var(--ink);font:inherit;font-size:14.5px;
+    padding:8px 0;
+  }
+  .float-composer input::placeholder{color:#aaa299}
+  .float-composer .fc-attach,
+  .float-composer .fc-mic{
+    width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;
+    color:var(--muted);
+    transition:all .12s ease;
+  }
+  .float-composer .fc-attach:hover,
+  .float-composer .fc-mic:hover{background:#f1eee7;color:var(--ink)}
+  .float-composer .fc-send{
+    width:36px;height:36px;border-radius:10px;
+    background:var(--ink);color:#fffefa;
+    display:grid;place-items:center;
+    transition:all .12s ease;
+  }
+  .float-composer .fc-send:hover{background:#000;transform:scale(1.04)}
+  .float-composer .fc-chips{
+    display:flex;align-items:center;gap:5px;
+    padding:0 6px 0 0;
+    margin-right:4px;
+    border-right:1px solid var(--line);
+  }
+  .fc-chip{
+    flex:0 0 auto;
+    padding:4px 10px;border-radius:99px;
+    background:rgba(168,126,44,.1);color:var(--gold);
+    font-size:12px;font-weight:540;
+  }
+  .fc-chip:hover{background:rgba(168,126,44,.18)}
+  @media (max-width:860px){
+    .float-composer{
+      left:50%;width:calc(100vw - 32px);
+      bottom:64px;
+    }
+    .float-composer .fc-chips{display:none}
+  }
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;
+    transform:translate(-50%,18px);opacity:0;pointer-events:none;
+    min-width:220px;max-width:min(420px,calc(100vw - 32px));
+    padding:10px 14px;border-radius:10px;background:#24211d;color:#fffefa;
+    box-shadow:0 18px 38px -24px rgba(0,0,0,.6);
+    transition:opacity .18s ease, transform .18s ease;
+    font-size:13px;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:860px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .topbar{padding:0 18px}
+    .quota{display:none}
+    .stage-top,.stream-section{width:calc(100% - 32px);margin-left:auto;margin-right:auto}
+    .stage-top{margin-top:28px}
+    h1{font-size:24px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">飞</span>
+      <span>飞象 AI</span>
+      <span class="brand-sub">学校版</span>
+    </div>
+
+    <button class="new-chat" data-toast="已新建对话">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      新对话
+    </button>
+
+    <button class="nav-item" data-toast="历史对话">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      历史对话
+      <span class="nav-count">86</span>
+    </button>
+
+    <div class="nav-section">
+      <div class="nav-title">知识库</div>
+      <button class="nav-item" data-toast="我的知识库"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><circle cx="12" cy="7" r="4"/></svg>我的知识库</button>
+      <button class="nav-item" data-toast="学校知识库"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>学校知识库</button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-title">常用</div>
+      <button class="nav-item" data-toast="我的班级"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>我的班级</button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-title">应用</div>
+      <button class="nav-item" data-toast="官方应用"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>官方应用 <span class="nav-count">3</span></button>
+      <button class="nav-item" data-toast="校本应用"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>校本应用 <span class="nav-count">8</span></button>
+    </div>
+
+    <div class="side-spacer"></div>
+
+    <div class="school-chip">
+      <div class="school-name">实验中学</div>
+      <div class="school-meta">认可的内容可保存到知识库</div>
+    </div>
+
+    <div class="user">
+      <div class="avatar">张</div>
+      <div>
+        <div class="user-name">张老师</div>
+        <div class="user-role">高一语文 · 学科老师</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">
+        <strong>实验中学</strong>
+        <span>/</span>
+        <span>飞象 AI</span>
+        <span style="color:var(--faint);margin:0 4px">·</span>
+        <span style="color:var(--muted)">方案 3 · 任务接续（对话 + 最近任务 + 内容流）</span>
+      </div>
+      <div class="top-actions">
+        <div class="quota"><span class="quota-dot"></span>本月算力正常</div>
+        <button class="icon-btn" title="设置" data-toast="设置">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1h.38a2 2 0 1 1 0 4h-.09c-.36 0-.69.08-1 .22z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 上半：v29 极简对话起手 -->
+    <section class="stage-top">
+      <div class="hero">
+        <h1>下午好，张老师</h1>
+        <div class="hero-sub">高一语文 · 实验中学 · 教研组共享 35 份资料</div>
+      </div>
+
+      <div class="composer">
+        <textarea id="prompt" placeholder="比如：明天这节课怎么上？参考学校资料整理成适合高一(3)班的教案、课件和练习。"></textarea>
+        <div class="composer-footer">
+          <div class="composer-tools">
+            <button class="tool-btn" title="上传附件" data-toast="正式版可上传附件"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+            <button class="tool-btn" title="语音输入" data-toast="正式版可接入语音输入"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg></button>
+            <button class="reference-note" data-toast="选择参考的知识库范围（全部 / 我的 / 学校 / 教研沉淀）"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>全部知识库</span><svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+          <button class="send" id="send" title="发送"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 中部：最近任务（事件接续 · 老师"我刚才在干嘛"） -->
+    <section class="recent-section" aria-label="最近任务">
+      <div class="recent-head">
+        <div class="recent-title">
+          <span class="recent-title-dot"></span>
+          最近
+          <span class="recent-title-meta">今天扫描 · 待批改 · 待发布</span>
+        </div>
+        <a class="recent-more" href="#" data-toast="查看全部任务">
+          全部任务 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
+      </div>
+      <div class="recent-grid">
+
+        <button class="recent-card rose" data-toast="进入「高一(3)班 阅读理解」批改 · 38 篇待批">
+          <span class="recent-tag"><span class="tag-dot"></span>作业 · 待批改</span>
+          <div class="recent-headline">高一(3)班 · 阅读理解《荷塘月色》</div>
+          <div class="recent-stat">
+            <span class="big">38</span><span>篇已扫描</span>
+            <span class="when">今早 9:23</span>
+          </div>
+        </button>
+
+        <button class="recent-card" data-toast="进入「高一(3)班 半命题作文」批改 · 5 篇待批">
+          <span class="recent-tag"><span class="tag-dot"></span>作文 · 待批改</span>
+          <div class="recent-headline">高一(3)班 · 半命题「______，让我看见」</div>
+          <div class="recent-stat">
+            <span class="big">5</span><span>篇已扫描</span>
+            <span class="when">昨日 16:45</span>
+          </div>
+        </button>
+
+        <button class="recent-card blue" data-toast="查看「周五随堂测试」进度">
+          <span class="recent-tag"><span class="tag-dot"></span>测验 · 进行中</span>
+          <div class="recent-headline">高一(3)班 · 周五随堂 · 文言虚词专项</div>
+          <div class="recent-stat">
+            <span class="big">23/40</span><span>已交</span>
+            <span class="when">23 分钟前</span>
+          </div>
+        </button>
+
+        <button class="recent-card green" data-toast="编辑并发布「周末作业」">
+          <span class="recent-tag"><span class="tag-dot"></span>作业 · 待发布</span>
+          <div class="recent-headline">高一(3)班 · 周末作业 · 已起草未发布</div>
+          <div class="recent-stat">
+            <span class="big">12</span><span>题已生成</span>
+            <span class="when">2 小时前</span>
+          </div>
+        </button>
+
+        <button class="recent-card entry" data-toast="扫描新作业 / 布置新作文 / 创建测验">
+          <span class="entry-icon">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+          <div class="entry-title">扫描 / 布置新任务</div>
+          <div class="entry-desc">作业 · 作文 · 测验<br>都可以从这里开始</div>
+        </button>
+
+      </div>
+    </section>
+
+    <!-- 下半：内容浏览（参考飞象老师 c 端，4 列瀑布流） -->
+    <section class="stream-section">
+
+      <!-- 来源 tabs -->
+      <div class="filter-bar">
+        <div class="tabs">
+          <button class="tab active" data-tab="recommend">推荐 <span class="tab-badge">12</span></button>
+          <button class="tab" data-tab="subject">高一语文</button>
+          <button class="tab" data-tab="school">学校知识库 <span class="tab-badge">35</span></button>
+          <button class="tab" data-tab="research">教研沉淀</button>
+          <button class="tab" data-tab="feixiang">飞象老师精选</button>
+          <button class="tab" data-tab="open">名师公开课</button>
+          <button class="tab" data-tab="favorite">我的收藏 23</button>
+        </div>
+        <div class="filter-search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input placeholder="快速搜索资料">
+        </div>
+      </div>
+
+      <!-- 4 列瀑布流 16 张卡 -->
+      <div class="content-grid">
+
+        <!-- 行 1：单元资料 / 高频备课 -->
+        <button class="card" data-toast="打开《荷塘月色》单元资料">
+          <div class="card-cover blue">
+            <span class="card-tag">单元资料</span>
+            <span class="card-cover-glyph">荷</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">《荷塘月色》单元 · 课件 + 教案 + 练习</div>
+            <div class="card-author">
+              <span class="author-avatar">研</span>
+              <span class="card-author-name">学科组</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>35 份</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开文言虚词专项">
+          <div class="card-cover">
+            <span class="card-tag">教研推荐</span>
+            <span class="card-cover-glyph">言</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">文言虚词专项 · 高一上必考 12 个</div>
+            <div class="card-author">
+              <span class="author-avatar">研</span>
+              <span class="card-author-name">高一语文教研组</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L9 9l-7 1 5 5-1 7 6-3 6 3-1-7 5-5-7-1z"/></svg>引 23</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开现代散文阅读策略">
+          <div class="card-cover green">
+            <span class="card-tag">名师课堂</span>
+            <span class="card-cover-glyph">散</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">现代散文阅读策略 · 名师公开课实录</div>
+            <div class="card-author">
+              <span class="author-avatar purple">名</span>
+              <span class="card-author-name">名师工作室</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>56</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开议论文写作角度">
+          <div class="card-cover purple">
+            <span class="card-tag">写作专题</span>
+            <span class="card-cover-glyph">议</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">议论文写作 8 个常用角度 · 配范文</div>
+            <div class="card-author">
+              <span class="author-avatar gold">飞</span>
+              <span class="card-author-name">飞象老师</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>86</span>
+            </div>
+          </div>
+        </button>
+
+        <!-- 行 2：别的老师在用（社交感） -->
+        <button class="card" data-toast="打开王老师的活动设计">
+          <div class="card-cover green">
+            <span class="card-tag gold">⭐ 学科组精选</span>
+            <span class="card-cover-glyph">塘</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">荷塘月色"画面捕捉法" · 课堂活动设计</div>
+            <div class="card-author">
+              <span class="author-avatar green">王</span>
+              <span class="card-author-name">王老师 · 高一 3 班</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>12</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开李老师的讲评思路">
+          <div class="card-cover blue">
+            <span class="card-tag">教研沉淀</span>
+            <span class="card-cover-glyph">评</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">作业讲评思路 · 错因分类 + 二次练习</div>
+            <div class="card-author">
+              <span class="author-avatar blue">李</span>
+              <span class="card-author-name">李老师 · 高一 5 班</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>8</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开飞象老师精选">
+          <div class="card-cover">
+            <span class="card-tag gold">飞象官方</span>
+            <span class="card-cover-glyph">写</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">作文 6 大主题速写 · 飞象老师精选</div>
+            <div class="card-author">
+              <span class="author-avatar gold">飞</span>
+              <span class="card-author-name">飞象老师</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>86</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开名师公开课">
+          <div class="card-cover purple">
+            <span class="card-tag">公开课</span>
+            <span class="card-cover-glyph">课</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">高一语文 · 名师公开课实录 5 套</div>
+            <div class="card-author">
+              <span class="author-avatar purple">名</span>
+              <span class="card-author-name">名师工作室</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>34</span>
+            </div>
+          </div>
+        </button>
+
+        <!-- 行 3：复习 / 模板 / 工具类 -->
+        <button class="card" data-toast="打开高考真题">
+          <div class="card-cover rose">
+            <span class="card-tag">复习</span>
+            <span class="card-cover-glyph">考</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">单元复习 · 高考真题 18 套</div>
+            <div class="card-author">
+              <span class="author-avatar">研</span>
+              <span class="card-author-name">教研组整理</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>42</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开评语模板库">
+          <div class="card-cover ink">
+            <span class="card-tag dark">评语</span>
+            <span class="card-cover-glyph">语</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">期末评语模板库 · 120 句 + 个性化生成</div>
+            <div class="card-author">
+              <span class="author-avatar">研</span>
+              <span class="card-author-name">教研组共用</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>引 56</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开学情周报模板">
+          <div class="card-cover green">
+            <span class="card-tag">模板</span>
+            <span class="card-cover-glyph">情</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">学情周报模板 · AI 自动汇总数据</div>
+            <div class="card-author">
+              <span class="author-avatar gold">飞</span>
+              <span class="card-author-name">飞象老师</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>28</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开教学计划">
+          <div class="card-cover blue">
+            <span class="card-tag">教学计划</span>
+            <span class="card-cover-glyph">划</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">高一上 · 教学进度计划 · 学科组共用</div>
+            <div class="card-author">
+              <span class="author-avatar">研</span>
+              <span class="card-author-name">学科组</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>本学期</span>
+            </div>
+          </div>
+        </button>
+
+        <!-- 行 4：本月榜 / 范文 / 假期方案 / 题库 -->
+        <button class="card" data-toast="打开教研组优秀课件">
+          <div class="card-cover rose">
+            <span class="card-tag">本月榜</span>
+            <span class="card-cover-glyph">优</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">教研组优秀课件 · 本月 TOP 18</div>
+            <div class="card-author">
+              <span class="author-avatar">研</span>
+              <span class="card-author-name">高一语文教研组</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L9 9l-7 1 5 5-1 7 6-3 6 3-1-7 5-5-7-1z"/></svg>5★</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开仿写范文库">
+          <div class="card-cover purple">
+            <span class="card-tag">范文</span>
+            <span class="card-cover-glyph">范</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">仿写范文 30 篇 · 按写作主题分类</div>
+            <div class="card-author">
+              <span class="author-avatar gold">飞</span>
+              <span class="card-author-name">飞象老师</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>72</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开寒暑假作业方案">
+          <div class="card-cover">
+            <span class="card-tag">方案库</span>
+            <span class="card-cover-glyph">假</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">寒暑假作业方案 · 6 套差异化设计</div>
+            <div class="card-author">
+              <span class="author-avatar gold">飞</span>
+              <span class="card-author-name">飞象老师</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>40</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="card" data-toast="打开单元测试题库">
+          <div class="card-cover blue">
+            <span class="card-tag">题库</span>
+            <span class="card-cover-glyph">测</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">单元测试题库 · 35 套含答案解析</div>
+            <div class="card-author">
+              <span class="author-avatar">研</span>
+              <span class="card-author-name">教研组整理</span>
+              <span class="card-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>67</span>
+            </div>
+          </div>
+        </button>
+
+      </div>
+    </section>
+
+
+  </main>
+</div>
+
+<!-- 滚动后出现的紧凑底部对话框 -->
+<div class="float-composer" id="floatComposer" aria-label="底部紧凑输入">
+  <button class="reference-note" data-toast="选择参考的知识库范围（全部 / 我的 / 学校 / 教研沉淀）" style="margin-right:2px">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span>全部知识库</span>
+    <svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+  <button class="fc-attach" title="上传文件" data-toast="上传文件">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m21 12-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 8"/></svg>
+  </button>
+  <input id="floatPrompt" placeholder="告诉飞象你想做什么，或继续浏览下面的资料找灵感">
+  <button class="fc-mic" title="语音" data-toast="语音输入">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+  </button>
+  <button class="fc-send" id="floatSend" title="发送">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- v33 方案切换器（底部浮动） -->
+<div class="vswitch">
+  <span class="vswitch-label">v33 方案</span>
+  <a href="../1-chatgpt/" class="vs-btn">1 · ChatGPT 极简</a>
+  <a href="../2-content-flow/" class="vs-btn">2 · 对话 + 内容流</a>
+  <a href="../3-scenes/" class="vs-btn active">3 · 任务接续</a>
+  <a href="../" class="vs-btn vs-home">总览 ↗</a>
+</div>
+<style>
+  .vswitch{
+    position:fixed;bottom:18px;left:50%;
+    transform:translateX(-50%);z-index:9999;
+    display:flex;align-items:center;gap:2px;
+    padding:5px 7px;
+    background:rgba(31,31,29,.88);
+    backdrop-filter:blur(8px);
+    border-radius:99px;
+    box-shadow:0 12px 32px -16px rgba(0,0,0,.5);
+    font-size:12px;
+  }
+  .vswitch-label{padding:0 9px 0 6px;color:rgba(255,254,250,.45);font-size:11px}
+  .vs-btn{
+    padding:6px 11px;border-radius:99px;
+    color:rgba(255,254,250,.72);font-size:12px;font-weight:500;
+    text-decoration:none;transition:all .12s ease;
+  }
+  .vs-btn:hover{color:#fffefa;background:rgba(255,254,250,.1)}
+  .vs-btn.active{background:#fffefa;color:#1f1f1d;font-weight:600}
+  .vs-home{margin-left:3px;padding-left:11px;border-left:1px solid rgba(255,254,250,.18);color:rgba(255,254,250,.55)}
+  @media (max-width:640px){
+    .vswitch{flex-wrap:wrap;justify-content:center;max-width:calc(100% - 24px);border-radius:14px}
+    .vswitch-label{display:none}
+  }
+</style>
+
+<script>
+  const promptEl = document.getElementById('prompt');
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(text){
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  document.querySelectorAll('[data-fill]').forEach((b) => {
+    b.addEventListener('click', () => {
+      promptEl.value = b.dataset.fill;
+      promptEl.focus();
+    });
+  });
+  document.querySelectorAll('[data-toast]').forEach((b) => {
+    b.addEventListener('click', () => showToast(b.dataset.toast));
+  });
+  document.querySelectorAll('.nav-item').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.getElementById('send').addEventListener('click', () => {
+    const text = promptEl.value.trim();
+    if(!text){ showToast('先说一件想做的事'); promptEl.focus(); return; }
+    showToast('已开始处理，这次过程会留在历史对话里');
+  });
+  promptEl.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)) document.getElementById('send').click();
+  });
+
+  // 来源 tabs 切换 active
+  document.querySelectorAll('.tab').forEach((t) => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(i => i.classList.remove('active'));
+      t.classList.add('active');
+      showToast('切换到「' + t.textContent.trim().replace(/\s+\d.*$/,'') + '」');
+    });
+  });
+
+  // 滚屏：大对话框收起 + 底部紧凑对话框出现
+  // 用滞回阈值（enter 220, leave 24）避免阈值附近来回抖动
+  const mainEl = document.querySelector('.main');
+  const ENTER_AT = 220;
+  const LEAVE_AT = 24;
+  let lastScrolled = false;
+  let pending = false;
+  function onScroll(){
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      const st = mainEl.scrollTop;
+      const next = lastScrolled ? (st > LEAVE_AT) : (st > ENTER_AT);
+      if (next !== lastScrolled){
+        lastScrolled = next;
+        mainEl.classList.toggle('scrolled', next);
+        document.body.classList.toggle('scrolled', next);
+      }
+    });
+  }
+  mainEl.addEventListener('scroll', onScroll, { passive:true });
+
+  // 底部紧凑对话框
+  const floatPrompt = document.getElementById('floatPrompt');
+  const floatSend = document.getElementById('floatSend');
+  floatSend.addEventListener('click', () => {
+    const text = floatPrompt.value.trim();
+    if(!text){ showToast('先说一件想做的事'); floatPrompt.focus(); return; }
+    showToast('已开始处理，这次过程会留在历史对话里');
+    floatPrompt.value = '';
+  });
+  floatPrompt.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); floatSend.click(); }
+  });
+</script>
+</body>
+</html>

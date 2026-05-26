@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞象 AI · 方案 4 · Cursor 双栏</title>
+<style>
+  :root{
+    --bg:#f6f3ed;
+    --side:#f1eee7;
+    --side-2:#ece8df;
+    --surface:#fffefa;
+    --surface-2:#fbfaf6;
+    --ink:#1f1f1d;
+    --muted:#77716a;
+    --faint:#aaa39a;
+    --line:#e6e0d6;
+    --line-strong:#d5cab8;
+    --gold:#a87e2c;
+    --gold-soft:#f3ead7;
+    --green:#537260;
+    --warn:#b97b3a;
+    --warn-soft:#f3e3cf;
+    --blue:#64758f;
+    --shadow:0 22px 52px -36px rgba(45,38,27,.42);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Source Han Sans SC","Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);color:var(--ink);
+    font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  button,textarea{font:inherit}
+  button{border:0;background:none;color:inherit;cursor:pointer;text-align:left}
+
+  /* 三栏：极窄活动栏 + 上下文树 + 主区 */
+  .app{
+    height:100vh;
+    display:grid;
+    grid-template-columns:48px 308px minmax(0,1fr);
+    overflow:hidden;
+  }
+
+  /* 极窄活动栏（Cursor / VSCode 风格） */
+  .activity{
+    background:var(--side-2);
+    border-right:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;
+    padding:10px 0;gap:4px;
+  }
+  .activity-logo{
+    width:30px;height:30px;border-radius:8px;
+    display:grid;place-items:center;
+    background:var(--ink);color:#fffefa;
+    font-weight:650;font-size:13px;
+    margin-bottom:6px;
+  }
+  .act-btn{
+    width:32px;height:32px;border-radius:7px;
+    display:grid;place-items:center;color:#807970;
+  }
+  .act-btn:hover{background:#e0dbd1;color:var(--ink)}
+  .act-btn.active{background:#dcd2bb;color:var(--gold)}
+  .activity-spacer{flex:1}
+  .act-avatar{
+    width:28px;height:28px;border-radius:50%;
+    display:grid;place-items:center;
+    background:#d9d1c2;color:#554d43;font-weight:650;font-size:12px;
+  }
+
+  /* 中间：工作上下文树（核心差异化） */
+  .context{
+    background:var(--side);
+    border-right:1px solid var(--line);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+  }
+  .context-head{
+    padding:14px 14px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  .context-school{
+    display:flex;align-items:center;gap:8px;
+    font-weight:620;font-size:13.5px;
+  }
+  .context-school .dropdown{
+    color:var(--faint);margin-left:auto;
+  }
+  .context-meta{
+    color:var(--muted);font-size:11.5px;margin-top:3px;
+  }
+  .context-search{
+    margin-top:10px;
+    height:30px;
+    display:flex;align-items:center;gap:7px;padding:0 10px;
+    border:1px solid var(--line);border-radius:7px;
+    background:rgba(255,255,255,.5);
+    color:var(--muted);font-size:12px;
+  }
+  .context-search kbd{
+    margin-left:auto;
+    font-family:inherit;
+    color:var(--faint);font-size:10.5px;
+  }
+
+  .tree{flex:1;overflow:auto;padding:10px 6px 14px}
+  .tree-group{margin-top:6px}
+  .tree-group:first-child{margin-top:0}
+  .tree-section-head{
+    display:flex;align-items:center;gap:5px;
+    padding:6px 10px 5px;
+    color:#5e574e;font-size:11px;font-weight:650;letter-spacing:.5px;
+    text-transform:uppercase;
+  }
+  .tree-section-head .count{
+    margin-left:auto;color:var(--faint);font-weight:500;
+  }
+  .tree-row{
+    width:100%;
+    display:flex;align-items:center;gap:6px;
+    padding:5px 8px;border-radius:6px;
+    color:#3f3a32;font-size:13px;
+    line-height:1.4;
+  }
+  .tree-row:hover{background:#e9e4db}
+  .tree-row.active{background:#ebe2d0;font-weight:600}
+  .tree-row .caret{
+    width:14px;height:14px;display:grid;place-items:center;
+    color:var(--faint);flex:0 0 14px;
+  }
+  .tree-row .icon{
+    width:16px;height:16px;display:grid;place-items:center;
+    color:#807970;flex:0 0 16px;
+  }
+  .tree-row.active .icon{color:var(--gold)}
+  .tree-row .label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tree-row .badge{
+    font-size:10.5px;
+    padding:1px 6px;border-radius:99px;
+    background:#e9e4db;color:#7a7268;font-weight:560;
+  }
+  .tree-row .badge.warn{background:var(--warn-soft);color:var(--warn)}
+  .tree-row .badge.dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--warn);padding:0;display:inline-block;
+  }
+  .tree-children{padding-left:18px;border-left:1px solid var(--line);margin-left:14px;margin-top:2px}
+  .tree-children .tree-row{font-size:12.5px;padding:4px 8px}
+  .tree-children .tree-children{padding-left:14px;margin-left:10px}
+
+  /* 主区 */
+  .main{
+    min-width:0;height:100vh;overflow:auto;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 180px),
+      var(--bg);
+    display:flex;flex-direction:column;
+  }
+  .topbar{
+    height:46px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;border-bottom:1px solid rgba(230,224,214,.7);
+  }
+  .tabs{
+    display:flex;align-items:center;gap:2px;
+    height:100%;
+  }
+  .tab{
+    height:100%;display:flex;align-items:center;gap:7px;
+    padding:0 14px;color:var(--muted);
+    border-right:1px solid var(--line);
+    font-size:12.5px;
+  }
+  .tab.active{
+    background:var(--bg);color:var(--ink);font-weight:600;
+    box-shadow:inset 0 -2px 0 var(--gold);
+  }
+  .tab .x{color:var(--faint);width:14px;height:14px;display:grid;place-items:center}
+  .tab .x:hover{color:var(--ink)}
+  .top-actions{display:flex;align-items:center;gap:6px;padding-right:6px}
+  .icon-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:7px;color:var(--muted)}
+  .icon-btn:hover{background:#ece7dd;color:var(--ink)}
+
+  /* 上下文条：Cursor 的"我已加载这些"的核心信号 */
+  .context-bar{
+    margin:18px 28px 0;
+    padding:11px 14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:11px;
+    display:flex;align-items:center;gap:14px;
+    box-shadow:var(--card-shadow);
+    font-size:12.5px;
+  }
+  .ctx-status{
+    display:flex;align-items:center;gap:7px;
+    color:var(--green);font-weight:560;
+  }
+  .ctx-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 0 3px rgba(83,114,96,.18);
+  }
+  .ctx-chips{
+    display:flex;flex-wrap:wrap;gap:6px;flex:1;
+  }
+  .ctx-chip{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:3px 8px;border-radius:6px;
+    background:#f1eee7;color:#5a544b;font-size:11.5px;
+  }
+  .ctx-chip svg{color:var(--gold)}
+  .ctx-action{
+    color:var(--muted);font-size:11.5px;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .ctx-action:hover{color:var(--ink)}
+
+  .stage{
+    flex:1;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 28px 30px;
+  }
+  .stage-inner{
+    width:min(740px,100%);
+    margin-bottom:4vh;
+    margin-top:24px;
+  }
+  h1{
+    margin:0 0 6px;
+    font-size:24px;font-weight:580;line-height:1.3;
+  }
+  .hero-sub{
+    color:var(--muted);font-size:13px;
+    margin-bottom:22px;
+  }
+  .composer{
+    position:relative;background:var(--surface);
+    border:1px solid var(--line-strong);border-radius:14px;
+    box-shadow:var(--shadow);overflow:hidden;
+  }
+  textarea{
+    width:100%;min-height:110px;
+    padding:18px 16px 10px;
+    border:0;resize:none;outline:0;background:transparent;
+    color:var(--ink);font-size:15px;line-height:1.55;
+  }
+  textarea::placeholder{color:#aaa299}
+  .composer-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #f0ece4;padding:8px 10px}
+  .composer-tools{display:flex;align-items:center;gap:4px}
+  .tool-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:7px;color:var(--muted)}
+  .tool-btn:hover{background:#f1eee7;color:var(--ink)}
+  .reference-note{display:inline-flex;align-items:center;gap:6px;padding:0 6px;color:var(--muted);font-size:11.5px}
+  .reference-note svg{color:var(--gold)}
+  .send{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:#fffefa;background:var(--ink)}
+
+  .quick-row{
+    display:flex;flex-direction:column;gap:6px;
+    margin-top:14px;
+  }
+  .quick-kicker{color:var(--muted);font-size:11.5px;margin-bottom:2px}
+  .quick{
+    display:flex;align-items:center;gap:8px;
+    padding:9px 12px;
+    border:1px solid var(--line);border-radius:9px;
+    background:rgba(255,255,255,.5);
+    color:#3f3a32;font-size:13px;
+    transition:all .12s ease;
+  }
+  .quick:hover{border-color:#cbbb9d;background:#fffefa}
+  .quick .quick-icon{
+    width:22px;height:22px;border-radius:6px;
+    display:grid;place-items:center;flex:0 0 22px;
+    background:var(--gold-soft);color:var(--gold);
+  }
+  .quick .quick-icon.warn{background:var(--warn-soft);color:var(--warn)}
+  .quick .quick-icon.green{background:#e6efe7;color:var(--green)}
+  .quick .quick-meta{margin-left:auto;color:var(--faint);font-size:11.5px}
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;
+    transform:translate(-50%,18px);opacity:0;pointer-events:none;
+    min-width:220px;max-width:min(420px,calc(100vw - 32px));
+    padding:10px 14px;border-radius:10px;background:#24211d;color:#fffefa;
+    box-shadow:0 18px 38px -24px rgba(0,0,0,.6);
+    transition:opacity .18s ease, transform .18s ease;
+    font-size:13px;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:960px){
+    .app{grid-template-columns:48px 1fr}
+    .context{display:none}
+  }
+  @media (max-width:640px){
+    .app{grid-template-columns:1fr}
+    .activity{display:none}
+    .stage{padding:0 16px 20px}
+    .context-bar{margin:14px 16px 0}
+    h1{font-size:21px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 活动栏（VSCode/Cursor 风格） -->
+  <nav class="activity" aria-label="活动栏">
+    <div class="activity-logo">飞</div>
+    <button class="act-btn active" title="工作上下文" data-toast="工作上下文树">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-3H5a2 2 0 0 0-2 2z"/></svg>
+    </button>
+    <button class="act-btn" title="搜索" data-toast="全局搜索 ⌘P">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </button>
+    <button class="act-btn" title="历史对话" data-toast="历史对话">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    </button>
+    <button class="act-btn" title="应用" data-toast="应用中心">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    </button>
+    <div class="activity-spacer"></div>
+    <button class="act-btn" title="设置" data-toast="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1h.38a2 2 0 1 1 0 4h-.09c-.36 0-.69.08-1 .22z"/></svg>
+    </button>
+    <div class="act-avatar">张</div>
+  </nav>
+
+  <!-- 工作上下文树（核心差异化：不是功能入口，是老师的工作树） -->
+  <aside class="context" aria-label="工作上下文">
+    <div class="context-head">
+      <div class="context-school">
+        实验中学
+        <svg class="dropdown" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="context-meta">高一语文 · 张老师 · 教 2 个班 70+70 人</div>
+      <div class="context-search">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        搜索资料 / 学生 / 应用
+        <kbd>⌘P</kbd>
+      </div>
+    </div>
+
+    <div class="tree">
+      <!-- 知识库 -->
+      <div class="tree-group">
+        <div class="tree-section-head">知识库 <span class="count">3</span></div>
+        <button class="tree-row" data-toast="学校知识库">
+          <span class="caret"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18l6-6-6-6"/></svg></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+          <span class="label">学校知识库</span>
+          <span class="badge">+12 本周</span>
+        </button>
+        <button class="tree-row" data-toast="我的知识库">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <span class="label">我的知识库</span>
+          <span class="badge">23</span>
+        </button>
+        <button class="tree-row" data-toast="教研组沉淀">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
+          <span class="label">教研组 · 高一语文</span>
+          <span class="badge">35</span>
+        </button>
+      </div>
+
+      <!-- 今天的课 -->
+      <div class="tree-group">
+        <div class="tree-section-head">今天的课 <span class="count">3 节</span></div>
+        <button class="tree-row" data-toast="8:00 高一3 荷塘月色">
+          <span class="caret"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M6 9l6 6 6-6"/></svg></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          <span class="label">8:00 高一3 · 荷塘月色</span>
+          <span class="badge warn">⚠ 未备</span>
+        </button>
+        <div class="tree-children">
+          <button class="tree-row" data-toast="备课资料"><span class="icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></span><span class="label">备课资料 35 份</span></button>
+          <button class="tree-row" data-toast="3 班学生学情"><span class="icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg></span><span class="label">3 班学生学情</span></button>
+          <button class="tree-row" data-toast="历届公开课"><span class="icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polygon points="6 3 20 12 6 21 6 3"/></svg></span><span class="label">历届公开课实录 5 份</span></button>
+        </div>
+        <button class="tree-row" data-toast="10:00 高一5 荷塘月色">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          <span class="label">10:00 高一5 · 荷塘月色</span>
+        </button>
+        <button class="tree-row" data-toast="14:00 高一3 作业讲评">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          <span class="label">14:00 高一3 · 作业讲评</span>
+        </button>
+      </div>
+
+      <!-- 我的班级 -->
+      <div class="tree-group">
+        <div class="tree-section-head">我的班级 <span class="count">2 班</span></div>
+        <button class="tree-row active" data-toast="高一 3 班">
+          <span class="caret"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M6 9l6 6 6-6"/></svg></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+          <span class="label">高一 3 班 · 70 人</span>
+          <span class="badge warn">3 需关注</span>
+        </button>
+        <div class="tree-children">
+          <button class="tree-row" data-toast="小明档案"><span class="icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="label">小明</span><span class="badge dot"></span></button>
+          <button class="tree-row" data-toast="小李档案"><span class="icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="label">小李</span><span class="badge dot"></span></button>
+          <button class="tree-row" data-toast="小王档案"><span class="icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="label">小王</span><span class="badge dot"></span></button>
+          <button class="tree-row" data-toast="班级全员"><span class="icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span><span class="label">全员 70 人</span></button>
+        </div>
+        <button class="tree-row" data-toast="高一 5 班">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+          <span class="label">高一 5 班 · 70 人</span>
+          <span class="badge">平稳</span>
+        </button>
+      </div>
+
+      <!-- 我的内容 -->
+      <div class="tree-group">
+        <div class="tree-section-head">我的内容</div>
+        <button class="tree-row" data-toast="草稿">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+          <span class="label">草稿</span>
+          <span class="badge">7</span>
+        </button>
+        <button class="tree-row" data-toast="收藏">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="label">收藏</span>
+          <span class="badge">23</span>
+        </button>
+        <button class="tree-row" data-toast="历史对话">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="label">历史对话</span>
+          <span class="badge">86</span>
+        </button>
+      </div>
+
+      <!-- 应用 -->
+      <div class="tree-group">
+        <div class="tree-section-head">应用</div>
+        <button class="tree-row" data-toast="作业批改">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+          <span class="label">作业批改</span>
+          <span class="badge">官方</span>
+        </button>
+        <button class="tree-row" data-toast="作文学情">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          <span class="label">作文学情</span>
+          <span class="badge">官方</span>
+        </button>
+        <button class="tree-row" data-toast="通知回执">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="label">通知回执</span>
+          <span class="badge warn">5 未回</span>
+        </button>
+        <button class="tree-row" data-toast="创建应用">
+          <span class="caret"></span>
+          <span class="icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="label" style="color:var(--muted)">创建新应用</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="tabs">
+        <div class="tab active">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          新对话 · 高一 3 班
+          <span class="x"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="tab" data-toast="切换标签页">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+          《荷塘月色》课件 v3
+        </div>
+        <button class="icon-btn" data-toast="新建标签页">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" title="分屏" data-toast="分屏对比"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="8" height="18"/><rect x="13" y="3" width="8" height="18"/></svg></button>
+        <button class="icon-btn" title="通知" data-toast="暂无新通知"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+      </div>
+    </header>
+
+    <!-- 上下文条：Cursor 的核心信号"我已加载这些" -->
+    <div class="context-bar">
+      <div class="ctx-status">
+        <span class="ctx-dot"></span>
+        飞象已就位
+      </div>
+      <div class="ctx-chips">
+        <span class="ctx-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>高一 3 班 70 人</span>
+        <span class="ctx-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>《荷塘月色》单元 35 份</span>
+        <span class="ctx-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>昨天作业批改</span>
+        <span class="ctx-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>今天 3 节课</span>
+      </div>
+      <a class="ctx-action" href="#" data-toast="调整上下文">
+        编辑 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </a>
+    </div>
+
+    <section class="stage">
+      <div class="stage-inner">
+        <h1>下午好，张老师</h1>
+        <div class="hero-sub">基于左侧选中的「高一 3 班」上下文，问飞象任何事 —— 它会用 3 班的学情和你的资料回答。</div>
+
+        <div class="composer">
+          <textarea id="prompt" placeholder="比如：明天 8 点这节课怎么上？基于 3 班昨天作业的错点，整理活动设计和讲评提纲。"></textarea>
+          <div class="composer-footer">
+            <div class="composer-tools">
+              <button class="tool-btn" title="上传附件" data-toast="正式版可上传附件"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+              <button class="tool-btn" title="语音输入" data-toast="正式版可接入语音输入"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg></button>
+              <span class="reference-note">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-3H5a2 2 0 0 0-2 2z"/></svg>
+                <span>上下文：高一 3 班 + 4 项资料</span>
+              </span>
+            </div>
+            <button class="send" id="send" title="发送"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg></button>
+          </div>
+        </div>
+
+        <div class="quick-row">
+          <div class="quick-kicker">基于当前上下文，飞象建议：</div>
+          <button class="quick" data-fill="基于 3 班昨天文言虚词作业的错点，整理今天 8 点这节《荷塘月色》的活动设计和讲评提纲。">
+            <span class="quick-icon warn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg></span>
+            <span>明天 8 点 高一 3 班课件还差活动设计</span>
+            <span class="quick-meta">⚠ 待办</span>
+          </button>
+          <button class="quick" data-fill="昨天 3 班文言虚词作业，错点集中在'之'的代词/动词混淆。整理 8 分钟讲评提纲。">
+            <span class="quick-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg></span>
+            <span>整理 3 班作业讲评提纲（错点已分析）</span>
+          </button>
+          <button class="quick" data-fill="小明这周第 3 次作文掉分，整理他过去 2 周的所有材料 + 谈话提纲。">
+            <span class="quick-icon green"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span>
+            <span>小明本周第 3 次作文掉分，准备谈话</span>
+          </button>
+          <button class="quick" data-fill="把今天的通知整理成家长回执，并统计高一 3 班 5 位未回的家长名单。">
+            <span class="quick-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <span>催 3 班 5 位家长回今天的回执</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- v33 方案切换器（底部浮动） -->
+<div class="vswitch">
+  <span class="vswitch-label">v33 方案</span>
+  <a href="../1-chatgpt/" class="vs-btn">1 · ChatGPT</a>
+  <a href="../2-doubao/" class="vs-btn">2 · 豆包</a>
+  <a href="../3-content-flow/" class="vs-btn">3 · 内容流</a>
+  <a href="../4-cursor/" class="vs-btn active">4 · Cursor</a>
+  <a href="../" class="vs-btn vs-home">总览 ↗</a>
+</div>
+<style>
+  .vswitch{
+    position:fixed;bottom:18px;left:50%;
+    transform:translateX(-50%);z-index:9999;
+    display:flex;align-items:center;gap:2px;
+    padding:5px 7px;
+    background:rgba(31,31,29,.88);
+    backdrop-filter:blur(8px);
+    border-radius:99px;
+    box-shadow:0 12px 32px -16px rgba(0,0,0,.5);
+    font-size:12px;
+  }
+  .vswitch-label{padding:0 9px 0 6px;color:rgba(255,254,250,.45);font-size:11px}
+  .vs-btn{
+    padding:6px 11px;border-radius:99px;
+    color:rgba(255,254,250,.72);font-size:12px;font-weight:500;
+    text-decoration:none;transition:all .12s ease;
+  }
+  .vs-btn:hover{color:#fffefa;background:rgba(255,254,250,.1)}
+  .vs-btn.active{background:#fffefa;color:#1f1f1d;font-weight:600}
+  .vs-home{margin-left:3px;padding-left:11px;border-left:1px solid rgba(255,254,250,.18);color:rgba(255,254,250,.55)}
+  @media (max-width:640px){
+    .vswitch{flex-wrap:wrap;justify-content:center;max-width:calc(100% - 24px);border-radius:14px}
+    .vswitch-label{display:none}
+  }
+</style>
+
+<script>
+  const promptEl = document.getElementById('prompt');
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(text){
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  document.querySelectorAll('[data-fill]').forEach((b) => {
+    b.addEventListener('click', () => {
+      promptEl.value = b.dataset.fill;
+      promptEl.focus();
+    });
+  });
+  document.querySelectorAll('[data-toast]').forEach((b) => {
+    b.addEventListener('click', () => showToast(b.dataset.toast));
+  });
+  document.querySelectorAll('.tree-row').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tree-row').forEach(i => i.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.act-btn').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.act-btn').forEach(i => i.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.getElementById('send').addEventListener('click', () => {
+    const text = promptEl.value.trim();
+    if(!text){ showToast('先说一件想做的事'); promptEl.focus(); return; }
+    showToast('已基于当前上下文开始处理');
+  });
+  promptEl.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)) document.getElementById('send').click();
+  });
+</script>
+</body>
+</html>
